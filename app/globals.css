@@ -200,9 +200,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .diary-row, .mention-card { border-color: rgba(207,228,213,.13); background: rgba(18,30,24,.72); }
 .empty-state h2, .analyzing h2 { color: #dce7de; }
 .editor-page { padding-left: clamp(108px, 15vw, 232px); background: linear-gradient(145deg, #07100d, #0b1511); }
-.paper-editor { border-color: rgba(214,229,217,.13); background-color: #111b17; background-image: linear-gradient(90deg, rgba(183,211,190,.035), transparent 8%), repeating-linear-gradient(0deg, transparent 0 31px, rgba(157,186,166,.05) 32px); box-shadow: -12px 22px 70px rgba(0,0,0,.28); }
-.paper-editor input { border-bottom-color: rgba(200,220,205,.12); color: #edf3ed; }
-.paper-editor textarea { color: #d8e1d9; }
+.paper-editor { border-color: rgba(229,214,196,.13); background-color: #1c140d; background-image: linear-gradient(90deg, rgba(214,183,140,.035), transparent 8%), repeating-linear-gradient(0deg, transparent 0 31px, rgba(186,150,110,.05) 32px); box-shadow: -12px 22px 70px rgba(0,0,0,.28); }
+.paper-editor input { border-bottom-color: rgba(224,205,180,.12); color: #f3ede4; }
+.paper-editor textarea { color: #e1d8cc; }
 .settings-page { background: linear-gradient(145deg, #07100d, #0c1712); }
 .activity-sheet { background: rgba(9, 18, 14, .96); color: #e8eee8; }
 .activity-content dl div { background: #14211b; }
@@ -217,12 +217,12 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .detail-orbit span { width: 72px; height: 4px; box-shadow: 0 0 12px var(--category-color); }.detail-orbit i { width: 57px; height: 2px; transform: rotate(120deg); }.detail-orbit b { width: 48px; height: 2px; transform: rotate(240deg); }
 [data-slot="dialog-overlay"] { background: rgba(1, 5, 3, .55); backdrop-filter: blur(9px) saturate(120%); -webkit-backdrop-filter: blur(9px) saturate(120%); }
 .forest-overlay { width: min(920px, calc(100vw - 36px)); max-width: 920px !important; max-height: calc(100vh - 42px); overflow: auto; gap: 22px; padding: clamp(24px, 4vw, 42px); border: none; border-radius: 28px; background: rgba(8, 17, 13, .95); color: #e8eee8; box-shadow: 0 38px 110px rgba(0,0,0,.65), inset 0 1px rgba(255,255,255,.14); backdrop-filter: blur(30px) saturate(135%); -webkit-backdrop-filter: blur(30px) saturate(135%); }
-.writing-overlay { width: min(760px, calc(100vw - 30px)); max-width: 760px !important; padding: clamp(18px, 3vw, 30px); background: rgba(7, 15, 11, .78); }
+.writing-overlay { width: min(760px, calc(100vw - 30px)); max-width: 760px !important; padding: clamp(18px, 3vw, 30px); background: rgba(24, 16, 10, .78); }
 .analysis-overlay { max-width: 1080px !important; }
 .overlay-page, .popup-editor { min-width: 0; }.overlay-page [data-slot="dialog-title"], .popup-editor [data-slot="dialog-title"] { font: 500 clamp(29px, 4vw, 42px)/1.12 Georgia, "Noto Serif KR", serif; letter-spacing: -.03em; }
 .overlay-page [data-slot="dialog-description"], .popup-editor [data-slot="dialog-description"] { color: #99a89e; font-size: 14px; line-height: 1.65; }
 .overlay-primary-action { position: absolute; top: 34px; right: 72px; }
-.popup-editor .paper-editor { min-height: min(64vh, 590px); margin: 0; padding: clamp(26px, 5vw, 56px); border-radius: 5px 24px 24px 5px; background-color: #121d18; }
+.popup-editor .paper-editor { min-height: min(64vh, 590px); margin: 0; padding: clamp(26px, 5vw, 56px); border-radius: 5px 24px 24px 5px; background-color: #1d150e; }
 .popup-editor .paper-editor textarea { min-height: 340px; padding-top: 4px; font-size: 18px; }
 .diary-overlay-page .diary-list { max-height: min(64vh, 620px); margin-top: 24px; overflow: auto; padding-right: 4px; }
 .diary-readonly { min-width: 0; padding: 12px; }.diary-readonly time { color: #8d9b92; font-size: 12px; }.diary-readonly p { margin: 8px 0 12px; color: #d3ddd5; font: 16px/1.75 Georgia, "Noto Serif KR", serif; white-space: pre-wrap; }.diary-readonly .status { font-family: "Pretendard", system-ui, sans-serif; }
