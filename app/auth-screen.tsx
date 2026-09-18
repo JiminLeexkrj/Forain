@@ -1,7 +1,7 @@
 "use client";
 
 import { type ComponentProps, type FormEvent, useState } from "react";
-import { LoaderCircle } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +51,15 @@ export function AuthScreen() {
   </section></main>;
 }
 
-function AuthField({ id, label, description, ...props }: ComponentProps<typeof Input> & { id: string; label: string; description?: string }) {
-  return <div className="auth-field"><Label htmlFor={id}>{label}</Label><Input id={id} required {...props} />{description && <small>{description}</small>}</div>;
+function AuthField({ id, label, description, type, ...props }: ComponentProps<typeof Input> & { id: string; label: string; description?: string }) {
+  const [visible, setVisible] = useState(false);
+  const isPassword = type === "password";
+  return <div className="auth-field">
+    <Label htmlFor={id}>{label}</Label>
+    <div className="auth-field-control">
+      <Input id={id} required type={isPassword && visible ? "text" : type} {...props} />
+      {isPassword && <button type="button" className="auth-field-toggle" onClick={() => setVisible((value) => !value)} aria-label={visible ? "비밀번호 숨기기" : "비밀번호 표시"}>{visible ? <EyeOff /> : <Eye />}</button>}
+    </div>
+    {description && <small>{description}</small>}
+  </div>;
 }
