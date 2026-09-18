@@ -6,6 +6,8 @@ const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 // Cloudflare Workers currently caps Web Crypto PBKDF2 at 100,000 iterations.
 // The per-user value is persisted, so a future runtime can raise this safely.
 const PASSWORD_ITERATIONS = 100_000;
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
 
 export type AppUser = {
   userId: string;
@@ -58,18 +60,46 @@ export async function registerUser(input: RegistrationInput): Promise<AppUser> {
   return { userId: id, loginId, displayName: input.displayName.trim() };
 }
 
-export async function authenticateUser(loginIdInput: string, password: string): Promise<AppUser | null> {
+export type AuthResult =
+  | { status: "ok"; user: AppUser }
+  | { status: "locked"; retryAfterSeconds: number }
+  | { status: "invalid" };
+
+export async function authenticateUser(loginIdInput: string, password: string): Promise<AuthResult> {
   const loginId = normalizeLoginId(loginIdInput);
-  const row = await database().prepare(
-    "SELECT id AS userId, login_id AS loginId, display_name AS displayName, password_hash AS passwordHash, password_salt AS passwordSalt, password_iterations AS passwordIterations FROM users WHERE login_id = ?"
-  ).bind(loginId).first<AppUser & { passwordHash: string; passwordSalt: string; passwordIterations: number }>();
+  const db = database();
+  const row = await db.prepare(
+    "SELECT id AS userId, login_id AS loginId, display_name AS displayName, password_hash AS passwordHash, password_salt AS passwordSalt, password_iterations AS passwordIterations, failed_login_attempts AS failedLoginAttempts, lockout_until AS lockoutUntil FROM users WHERE login_id = ?"
+  ).bind(loginId).first<AppUser & { passwordHash: string; passwordSalt: string; passwordIterations: number; failedLoginAttempts: number; lockoutUntil: string | null }>();
   if (!row) {
     await derivePassword(password || "invalid-password", crypto.getRandomValues(new Uint8Array(16)), PASSWORD_ITERATIONS);
-    return null;
+    return { status: "invalid" };
   }
+
+  const now = Date.now();
+  const lockoutUntil = row.lockoutUntil ? new Date(row.lockoutUntil).getTime() : null;
+  if (lockoutUntil !== null && lockoutUntil > now) {
+    return { status: "locked", retryAfterSeconds: Math.ceil((lockoutUntil - now) / 1000) };
+  }
+
   const actual = await derivePassword(password, decodeBytes(row.passwordSalt), row.passwordIterations);
-  if (!constantTimeEqual(actual, decodeBytes(row.passwordHash))) return null;
-  return { userId: row.userId, loginId: row.loginId, displayName: row.displayName };
+  const passwordMatches = constantTimeEqual(actual, decodeBytes(row.passwordHash));
+
+  if (!passwordMatches) {
+    // A lockout that has already expired doesn't carry its attempt count forward.
+    const baseline = lockoutUntil !== null ? 0 : row.failedLoginAttempts;
+    const attempts = baseline + 1;
+    if (attempts >= MAX_FAILED_ATTEMPTS) {
+      const nextLockout = new Date(now + LOCKOUT_MINUTES * 60 * 1000).toISOString();
+      await db.prepare("UPDATE users SET failed_login_attempts = ?, lockout_until = ? WHERE id = ?").bind(attempts, nextLockout, row.userId).run();
+    } else {
+      await db.prepare("UPDATE users SET failed_login_attempts = ?, lockout_until = NULL WHERE id = ?").bind(attempts, row.userId).run();
+    }
+    return { status: "invalid" };
+  }
+
+  await db.prepare("UPDATE users SET failed_login_attempts = 0, lockout_until = NULL WHERE id = ?").bind(row.userId).run();
+  return { status: "ok", user: { userId: row.userId, loginId: row.loginId, displayName: row.displayName } };
 }
 
 export async function createSession(userId: string) {

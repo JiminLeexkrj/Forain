@@ -19,7 +19,7 @@
     {
       "idx": 2,
       "version": "6",
-      "when": 1789785000000,
+      "when": 1789746275994,
       "tag": "0002_remove_daily_growth_caps",
       "breakpoints": true
     },
@@ -28,6 +28,13 @@
       "version": "6",
       "when": 1789748560108,
       "tag": "0003_glorious_triton",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789761076711,
+      "tag": "0004_gorgeous_otto_octavius",
       "breakpoints": true
     }
   ]
