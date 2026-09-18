@@ -171,6 +171,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .fractal-spoke, .fractal-segment { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .fractal-spoke.halo, .fractal-segment.halo { opacity: calc(var(--branch-strength) * .2); filter: blur(5px); }
 .fractal-bud { opacity: calc(.42 + var(--branch-strength) * .58); filter: drop-shadow(0 0 6px var(--branch-color)); animation: bud-pulse 4.2s ease-in-out infinite; }
+.fractal-bud .leaf-vein { fill: none; stroke: rgba(0, 0, 0, .3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .fractal-bud:nth-of-type(3n) { animation-delay: -1.4s; }
 .fractal-bud:nth-of-type(3n + 1) { animation-delay: -2.8s; }
 .branch-cursor-label rect { fill: rgba(7, 17, 12, .94); stroke: rgba(221, 240, 226, .2); stroke-width: 1px; filter: drop-shadow(0 8px 14px rgba(0,0,0,.5)); }

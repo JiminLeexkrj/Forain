@@ -342,7 +342,7 @@ function FractalCanopy({ growth, totalGrowth, selected, onSelect }: { growth: Re
           <path className="fractal-hit" d={segment.d} />
           <path className="fractal-segment halo" d={segment.d} stroke={color} strokeWidth={Math.max(.9, thickness * (1 - segment.depth * .2)) + 7} />
           <path className="fractal-segment" d={segment.d} stroke={color} strokeWidth={Math.max(.9, thickness * (1 - segment.depth * .2))} filter={score > 3 ? `url(#glow-${category.toLowerCase()})` : undefined} />
-          {segment.depth === branch.level && score > 0 && <Foliage x={segment.x} y={segment.y} angle={segment.angle} jitter={segment.jitter} score={score} color={color} />}
+          {segment.depth === branch.level && score > 0 && <Foliage x={segment.x} y={segment.y} angle={segment.angle} jitter={segment.jitter} score={score} color={color} rhythm={pattern.rhythm} />}
         </g>)}
       </g>;
     })}
@@ -391,7 +391,41 @@ function ForestSilhouettes({ totalGrowth }: { totalGrowth: number }) {
   </g>;
 }
 
-function Foliage({ x, y, angle, jitter, score, color }: { x: number; y: number; angle: number; jitter: number; score: number; color: string }) {
+// Each category's `rhythm` name (from categoryPatterns) picks a distinct leaf/bud
+// silhouette instead of every category sharing the same plain oval. Shapes are drawn
+// in local coordinates with the attachment point at the origin and the body extending
+// toward +X; Foliage handles positioning by translating to the tip and rotating.
+function leafShape(rhythm: string, size: number, jitter: number) {
+  const s = size;
+  switch (rhythm) {
+    case "결정": // LEARNING - faceted gem
+      return <path d={`M 0 0 L ${(s * .6).toFixed(1)} ${(-s * .55).toFixed(1)} L ${(s * 1.8).toFixed(1)} 0 L ${(s * .6).toFixed(1)} ${(s * .55).toFixed(1)} Z`} />;
+    case "격자": // WORK - blocky rectangle
+      return <path d={`M 0 ${(-s * .5).toFixed(1)} L ${(s * 1.6).toFixed(1)} ${(-s * .5).toFixed(1)} L ${(s * 1.6).toFixed(1)} ${(s * .5).toFixed(1)} L 0 ${(s * .5).toFixed(1)} Z`} />;
+    case "파동": // CREATIVE - wavy scalloped petal
+      return <path d={`M 0 0 Q ${(s * .6).toFixed(1)} ${(-s * .9).toFixed(1)} ${(s * 1).toFixed(1)} ${(-s * .3).toFixed(1)} Q ${(s * 1.5).toFixed(1)} ${(-s * .7).toFixed(1)} ${(s * 1.8).toFixed(1)} 0 Q ${(s * 1.5).toFixed(1)} ${(s * .7).toFixed(1)} ${(s * 1).toFixed(1)} ${(s * .3).toFixed(1)} Q ${(s * .6).toFixed(1)} ${(s * .9).toFixed(1)} 0 0 Z`} />;
+    case "박동": // MUSIC - petal with a note-head dot
+      return <><path d={`M 0 0 Q ${(s * .9).toFixed(1)} ${(-s * .85).toFixed(1)} ${(s * 1.6).toFixed(1)} 0 Q ${(s * .9).toFixed(1)} ${(s * .85).toFixed(1)} 0 0 Z`} /><circle cx={(s * 1.85).toFixed(1)} cy="0" r={(s * .3).toFixed(1)} /></>;
+    case "맥박": // EXERCISE - heartbeat-monitor spike
+      return <path d={`M 0 0 L ${(s * .5).toFixed(1)} ${(-s * .15).toFixed(1)} L ${(s * .8).toFixed(1)} ${(-s * 1.1).toFixed(1)} L ${(s * 1.1).toFixed(1)} ${(s * .15).toFixed(1)} L ${(s * 1.8).toFixed(1)} 0 L ${(s * 1.1).toFixed(1)} ${(s * .5).toFixed(1)} Q ${(s * .5).toFixed(1)} ${(s * .5).toFixed(1)} 0 0 Z`} />;
+    case "연결": // SOCIAL - two linked bubbles
+      return <><circle cx={(s * .7).toFixed(1)} cy="0" r={(s * .5).toFixed(1)} /><circle cx={(s * 1.7).toFixed(1)} cy="0" r={(s * .6).toFixed(1)} /></>;
+    case "층위": // CULTURE - layered petal with an inner vein
+      return <><path d={`M 0 0 Q ${(s * .7).toFixed(1)} ${(-s * .9).toFixed(1)} ${(s * 1.8).toFixed(1)} 0 Q ${(s * .7).toFixed(1)} ${(s * .9).toFixed(1)} 0 0 Z`} /><path className="leaf-vein" d={`M ${(s * .5).toFixed(1)} ${(-s * .5).toFixed(1)} Q ${(s * 1.1).toFixed(1)} ${(-s * .3).toFixed(1)} ${(s * 1.3).toFixed(1)} 0`} /></>;
+    case "반복": // DAILY_LIFE - a repeating row of dots
+      return <><circle cx={(s * .6).toFixed(1)} cy="0" r={(s * .28).toFixed(1)} /><circle cx={(s * 1.15).toFixed(1)} cy="0" r={(s * .28).toFixed(1)} /><circle cx={(s * 1.7).toFixed(1)} cy="0" r={(s * .28).toFixed(1)} /></>;
+    case "여백": // REST - the plainest, softest shape, fittingly minimal
+      return <ellipse cx={(s * .95).toFixed(1)} cy="0" rx={(s * .95).toFixed(1)} ry={(s * .5).toFixed(1)} />;
+    case "궤적": // TRAVEL - a tapering comet trail
+      return <path d={`M 0 ${(-s * .15).toFixed(1)} Q ${(s * .8).toFixed(1)} ${(-s * .5).toFixed(1)} ${(s * 2.1).toFixed(1)} 0 Q ${(s * .8).toFixed(1)} ${(s * .5).toFixed(1)} 0 ${(s * .15).toFixed(1)} Z`} />;
+    case "포옹": // CARE - a heart, point toward the branch, lobes reaching outward
+      return <path d={`M 0 0 C ${(-s * .2).toFixed(1)} ${(-s * .7).toFixed(1)} ${(s * .5).toFixed(1)} ${(-s * 1.1).toFixed(1)} ${(s * 1).toFixed(1)} ${(-s * .5).toFixed(1)} C ${(s * 1.5).toFixed(1)} ${(-s * 1.1).toFixed(1)} ${(s * 2.2).toFixed(1)} ${(-s * .6).toFixed(1)} ${(s * 1.9).toFixed(1)} 0 C ${(s * 2.2).toFixed(1)} ${(s * .6).toFixed(1)} ${(s * 1.5).toFixed(1)} ${(s * 1.1).toFixed(1)} ${(s * 1).toFixed(1)} ${(s * .5).toFixed(1)} C ${(s * .5).toFixed(1)} ${(s * 1.1).toFixed(1)} ${(-s * .2).toFixed(1)} ${(s * .7).toFixed(1)} 0 0 Z`} />;
+    default: // OTHER ("변주") - an asymmetric blob, jitter-perturbed so it truly varies
+      return <path d={`M 0 0 Q ${(s * .5 + jitter * s * .4).toFixed(1)} ${(-s * .95).toFixed(1)} ${(s * 1.5).toFixed(1)} ${(-s * .25 - jitter * s * .3).toFixed(1)} Q ${(s * 2 + jitter * s * .3).toFixed(1)} ${(s * .15).toFixed(1)} ${(s * 1.3).toFixed(1)} ${(s * .65).toFixed(1)} Q ${(s * .6 - jitter * s * .3).toFixed(1)} ${(s * .85).toFixed(1)} 0 0 Z`} />;
+  }
+}
+
+function Foliage({ x, y, angle, jitter, score, color, rhythm }: { x: number; y: number; angle: number; jitter: number; score: number; color: string; rhythm: string }) {
   const base = 2.6 + extendedGrowth(score, 10) * .34;
   const leafCount = score >= 5 ? 3 : score >= 2 ? 2 : 1;
   return <g className="fractal-foliage">
@@ -400,10 +434,7 @@ function Foliage({ x, y, angle, jitter, score, color }: { x: number; y: number; 
       const variance = (jitter * 37 + index * 53) % 1;
       const size = base * (.78 + variance * .5);
       const leafAngle = angle + spread;
-      const rad = leafAngle * Math.PI / 180;
-      const cx = x + Math.cos(rad) * size * 1.05;
-      const cy = y + Math.sin(rad) * size * 1.05;
-      return <ellipse key={index} className="fractal-bud" cx={cx} cy={cy} rx={size * 1.9} ry={size * .95} fill={color} transform={`rotate(${leafAngle.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})`} />;
+      return <g key={index} className="fractal-bud" fill={color} transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${leafAngle.toFixed(1)})`}>{leafShape(rhythm, size, jitter)}</g>;
     })}
   </g>;
 }
