@@ -3,7 +3,9 @@ import { database, nowIso } from "@/lib/database";
 
 const SESSION_COOKIE = "forain_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
-const PASSWORD_ITERATIONS = 210_000;
+// Cloudflare Workers currently caps Web Crypto PBKDF2 at 100,000 iterations.
+// The per-user value is persisted, so a future runtime can raise this safely.
+const PASSWORD_ITERATIONS = 100_000;
 
 export type AppUser = {
   userId: string;
