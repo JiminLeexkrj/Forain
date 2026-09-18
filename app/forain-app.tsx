@@ -65,6 +65,17 @@ function fractalSegments(angle: number, score: number, split: number) {
     const midX = (x + endX) / 2 - Math.sin(rad) * bend;
     const midY = (y + endY) / 2 + Math.cos(rad) * bend;
     segments.push({ d: `M ${x.toFixed(1)} ${y.toFixed(1)} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${endX.toFixed(1)} ${endY.toFixed(1)}`, depth, x: endX, y: endY });
+    if (depth === 0 && level >= 2) {
+      const lowerShoots = [
+        { at: .34, side: -1 },
+        { at: .58, side: 1 },
+      ];
+      for (const shoot of lowerShoots) {
+        const shootX = x + (endX - x) * shoot.at;
+        const shootY = y + (endY - y) * shoot.at;
+        grow(shootX, shootY, direction + shoot.side * (78 + split * .35), length * (.42 + score * .004), 2);
+      }
+    }
     if (depth >= level) return;
     const nextLength = length * (.62 + Math.min(score, 12) * .004);
     grow(endX, endY, direction - split, nextLength, depth + 1);
@@ -251,12 +262,24 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
 }
 
 function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, number>; selected: string | null; onSelect: (category: string) => void }) {
+  const [hovered, setHovered] = useState<{ category: string; x: number; y: number } | null>(null);
   const ringPoints = categoryOrder.map((_, index) => {
     const angle = (-90 + index * 30) * Math.PI / 180;
     return `${(500 + Math.cos(angle) * 67).toFixed(1)},${(500 + Math.sin(angle) * 67).toFixed(1)}`;
   }).join(" ");
 
-  return <svg className="fractal-canopy" viewBox="0 0 1000 1000" role="img" aria-label="중앙 핵에서 열두 카테고리의 줄기가 프랙탈 구조로 자라는 결숲">
+  const moveTooltip = (event: React.PointerEvent<SVGGElement>, category: string) => {
+    const svg = event.currentTarget.ownerSVGElement;
+    const matrix = svg?.getScreenCTM();
+    if (!svg || !matrix) return;
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    const local = point.matrixTransform(matrix.inverse());
+    setHovered({ category, x: local.x, y: local.y });
+  };
+
+  return <svg className="fractal-canopy" viewBox="0 0 1000 1000" role="img" aria-label="중앙 핵에서 열두 카테고리의 줄기가 프랙탈 구조로 자라는 결숲" onPointerLeave={() => setHovered(null)}>
     <defs>
       <radialGradient id="nucleus" cx="42%" cy="38%"><stop offset="0" stopColor="#efffd5" /><stop offset=".22" stopColor="#a8ed83" /><stop offset=".58" stopColor="#335a46" /><stop offset="1" stopColor="#0a1712" /></radialGradient>
       <filter id="core-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="13" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
@@ -273,19 +296,16 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
       const branch = fractalSegments(angle, score, pattern.split);
       const thickness = 2.2 + Math.min(score, 16) * .52;
       const active = !selected || selected === category;
-      const labelAngle = angle * Math.PI / 180;
-      const labelX = 500 + Math.cos(labelAngle) * 375;
-      const labelY = 500 + Math.sin(labelAngle) * 375;
-      const labelAnchor = Math.abs(Math.cos(labelAngle)) < .2 ? "middle" : Math.cos(labelAngle) > 0 ? "start" : "end";
-      return <g key={category} className={`fractal-branch ${active ? "is-active" : "is-muted"}`} style={{ "--branch-color": color, "--branch-strength": Math.min(1, .25 + score / 12) } as React.CSSProperties} role="button" tabIndex={0} aria-label={`${categoryLabels[category]} 줄기, 누적 생장도 ${score.toFixed(1)}`} onClick={() => onSelect(category)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(category); } }}>
+      return <g key={category} className={`fractal-branch ${active ? "is-active" : "is-muted"}`} style={{ "--branch-color": color, "--branch-strength": Math.min(1, .25 + score / 12) } as React.CSSProperties} role="button" tabIndex={0} aria-label={`${categoryLabels[category]} 줄기, 누적 생장도 ${score.toFixed(1)}`} onPointerEnter={(event) => moveTooltip(event, category)} onPointerMove={(event) => moveTooltip(event, category)} onPointerLeave={() => setHovered(null)} onClick={() => onSelect(category)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(category); } }}>
+        <path className="fractal-hit" d={`M 500 500 L ${branch.startX.toFixed(1)} ${branch.startY.toFixed(1)}`} />
         <path className="fractal-spoke halo" d={`M 500 500 L ${branch.startX.toFixed(1)} ${branch.startY.toFixed(1)}`} stroke={color} strokeWidth={thickness + 8} />
         <path className="fractal-spoke" d={`M 500 500 L ${branch.startX.toFixed(1)} ${branch.startY.toFixed(1)}`} stroke={color} strokeWidth={thickness + 1.5} strokeDasharray={pattern.dash} />
         {branch.segments.map((segment, segmentIndex) => <g key={segmentIndex}>
+          <path className="fractal-hit" d={segment.d} />
           <path className="fractal-segment halo" d={segment.d} stroke={color} strokeWidth={Math.max(1.2, thickness * (1 - segment.depth * .17)) + 7} />
           <path className="fractal-segment" d={segment.d} stroke={color} strokeWidth={Math.max(1.2, thickness * (1 - segment.depth * .17))} strokeDasharray={pattern.dash} filter={score > 3 ? `url(#glow-${category.toLowerCase()})` : undefined} />
           {segment.depth === branch.level && score > 0 && <circle className="fractal-bud" cx={segment.x} cy={segment.y} r={2.5 + Math.min(score, 10) * .17} fill={color} />}
         </g>)}
-        <text className="branch-label" x={labelX} y={labelY} textAnchor={labelAnchor} dominantBaseline="middle" fill={color}><tspan>{categoryLabels[category]}</tspan><tspan className="branch-score" x={labelX} dy="16">{score.toFixed(1)}</tspan></text>
       </g>;
     })}
     <polygon className="nucleus-ring" points={ringPoints} />
@@ -293,6 +313,11 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
     <circle className="nucleus-core" cx="500" cy="500" r="43" fill="url(#nucleus)" />
     <circle className="nucleus-pulse" cx="500" cy="500" r="57" />
     <text className="nucleus-label" x="500" y="505" textAnchor="middle">핵</text>
+    {hovered && <g className="branch-cursor-label" transform={`translate(${Math.min(860, hovered.x + 18)} ${Math.min(935, hovered.y + 20)})`} pointerEvents="none">
+      <rect x="0" y="-28" width={categoryLabels[hovered.category].length > 4 ? 112 : 82} height="38" rx="12" />
+      <circle cx="15" cy="-9" r="4" fill={categoryColors[hovered.category]} />
+      <text x="27" y="-5">{categoryLabels[hovered.category]}</text>
+    </g>}
   </svg>;
 }
 

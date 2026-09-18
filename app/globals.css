@@ -155,12 +155,13 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .fractal-field-ring.middle { stroke-dasharray: 1 12; }.fractal-field-ring.inner { stroke: rgba(189, 225, 199, .11); stroke-dasharray: 2 6; }
 .fractal-branch { outline: none; cursor: pointer; transition: opacity .35s ease, filter .35s ease; }
 .fractal-branch.is-muted { opacity: .16; }.fractal-branch:hover, .fractal-branch:focus-visible { opacity: 1; filter: brightness(1.32); }
+.fractal-hit { fill: none; stroke: transparent; stroke-width: 22px; pointer-events: stroke; vector-effect: non-scaling-stroke; }
 .fractal-spoke, .fractal-segment { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; animation: fractal-flow 9s linear infinite; }
 .fractal-branch:nth-of-type(3n) .fractal-segment { animation-direction: reverse; animation-duration: 12s; }
 .fractal-spoke.halo, .fractal-segment.halo { opacity: calc(var(--branch-strength) * .2); filter: blur(5px); }
 .fractal-bud { opacity: calc(.36 + var(--branch-strength) * .62); filter: drop-shadow(0 0 7px var(--branch-color)); animation: bud-pulse 3.6s ease-in-out infinite; }
-.branch-label { font: 600 14px/1 "Pretendard", "Noto Sans KR", sans-serif; letter-spacing: .03em; paint-order: stroke; stroke: rgba(2,7,4,.86); stroke-width: 5px; stroke-linejoin: round; }
-.branch-score { fill: rgba(221,232,225,.58); font-size: 11px; font-weight: 500; stroke-width: 4px; }
+.branch-cursor-label rect { fill: rgba(7, 17, 12, .94); stroke: rgba(221, 240, 226, .2); stroke-width: 1px; filter: drop-shadow(0 8px 14px rgba(0,0,0,.5)); }
+.branch-cursor-label text { fill: #edf4ee; font: 650 14px/1 "Pretendard", "Noto Sans KR", sans-serif; letter-spacing: .02em; }
 .nucleus-ring { fill: rgba(135, 184, 151, .05); stroke: rgba(210, 240, 210, .28); stroke-width: 1.5; }
 .nucleus-aura { opacity: .23; }.nucleus-core { stroke: rgba(239,255,218,.74); stroke-width: 1.3; }
 .nucleus-pulse { fill: none; stroke: rgba(190,240,148,.44); stroke-width: 1.4; transform-origin: 500px 500px; animation: nucleus-pulse 4s ease-out infinite; }
@@ -232,7 +233,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .side-panel, .side-panel.open, .side-panel.closed { inset: auto 10px 10px; width: auto; height: 58px; flex-direction: row; align-items: center; padding: 8px; border-radius: 18px; }
   .brand-row, .collapse { display: none; }.side-panel nav { flex: 1; flex-direction: row; justify-content: space-around; }.side-panel nav button { width: 46px; padding: 0; justify-content: center; }.new-fragment { width: 46px; margin: 0; padding: 0; }
   .forest-view { height: calc(100vh - 0px); min-height: 600px; }.forest-heading { left: 22px; top: 24px; }.forest-heading span { display: none; }
-  .fractal-canopy { top: 43%; width: 108vw; height: 108vw; }.branch-label { font-size: 18px; }.branch-score { font-size: 14px; }
+  .fractal-canopy { top: 43%; width: 108vw; height: 108vw; }
   .growth-meter { left: 18px; right: 18px; top: auto; bottom: 84px; width: auto; }.zoom-controls { right: 18px; bottom: 150px; }.hide-ui { right: 18px; bottom: 208px; }.floating-write { bottom: 24px; }
   .content-page, .analysis-page { padding: 42px 20px 100px; }.page-heading > button { position: static; margin-top: 18px; }.dashboard-grid { grid-template-columns: 1fr; }.dashboard-grid .paper-card, .forest-callout { grid-column: auto; }.forest-callout { align-items: flex-start; flex-direction: column; gap: 18px; }
   .forest-overlay { width: calc(100vw - 18px); max-height: calc(100vh - 18px); padding: 24px 18px; border-radius: 22px; }.overlay-primary-action { position: static; margin-top: 18px; }.popup-editor .paper-editor { min-height: 65vh; padding: 28px 22px; }.popup-editor .paper-editor textarea { min-height: 360px; }.forest-overlay .analysis-layout { grid-template-columns: 1fr; }.forest-overlay .analysis-layout .source { max-height: 180px; }.diary-overlay-page .diary-list { max-height: 65vh; }
