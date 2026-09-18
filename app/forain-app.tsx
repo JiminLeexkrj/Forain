@@ -76,6 +76,13 @@ function angleDiff(from: number, to: number) {
   return diff;
 }
 
+// Matches `score` 1:1 up to `cap` (identical to the old hard-capped behavior),
+// then keeps growing past it at a decelerating rate instead of flattening out —
+// so very high scores never look identical, without piling on density either.
+function extendedGrowth(score: number, cap: number) {
+  return score <= cap ? score : cap + Math.sqrt(score - cap);
+}
+
 function fractalSegments(angle: number, score: number, split: number, seedKey: string) {
   const rand = seededRandom(hashSeed(seedKey));
   const level = score <= 0 ? 0 : Math.min(5, Math.max(1, Math.floor(Math.log2(score + 1)) + 1));
@@ -91,12 +98,12 @@ function fractalSegments(angle: number, score: number, split: number, seedKey: s
     const reach = length * (.7 + rand() * .6);
     const endX = x + Math.cos(rad) * reach;
     const endY = y + Math.sin(rad) * reach;
-    const bend = (rand() > .5 ? 1 : -1) * (3 + rand() * 6 + score * .4);
+    const bend = (rand() > .5 ? 1 : -1) * (3 + rand() * 6 + extendedGrowth(score, 15) * .4);
     const midX = (x + endX) / 2 - Math.sin(rad) * bend;
     const midY = (y + endY) / 2 + Math.cos(rad) * bend;
     segments.push({ d: `M ${x.toFixed(1)} ${y.toFixed(1)} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${endX.toFixed(1)} ${endY.toFixed(1)}`, depth, x: endX, y: endY, angle: finalDirection, jitter: rand() });
     if (depth >= level) return;
-    const nextLength = length * (.55 + Math.min(score, 12) * .004 + rand() * .16);
+    const nextLength = length * (.55 + extendedGrowth(score, 12) * .004 + rand() * .16);
     const spread = split * (.75 + rand() * .5);
     grow(endX, endY, finalDirection - spread, nextLength, depth + 1);
     grow(endX, endY, finalDirection + spread, nextLength, depth + 1);
@@ -110,7 +117,7 @@ function fractalSegments(angle: number, score: number, split: number, seedKey: s
       grow(endX, endY, upDirection, nextLength * (.7 + rand() * .35), depth + 1);
     }
   };
-  const trunkLength = (65 + level * 18 + Math.min(score, 12) * 3) * (.5 + rand() * .75);
+  const trunkLength = (65 + level * 18 + extendedGrowth(score, 12) * 3) * (.5 + rand() * .75);
   grow(startX, startY, angle, trunkLength, 0);
   return { segments, level, startX, startY };
 }
@@ -325,7 +332,7 @@ function FractalCanopy({ growth, totalGrowth, selected, onSelect }: { growth: Re
       const color = categoryColors[category];
       const pattern = categoryPatterns[category];
       const branch = fractalSegments(angle, score, pattern.split, category);
-      const thickness = 2.4 + Math.min(score, 20) * .13;
+      const thickness = 2.4 + extendedGrowth(score, 20) * .13;
       const active = !selected || selected === category;
       return <g key={category} className={`fractal-branch ${active ? "is-active" : "is-muted"}`} style={{ "--branch-color": color, "--branch-strength": Math.min(1, .25 + score / 12) } as React.CSSProperties} role="button" tabIndex={0} aria-label={`${categoryLabels[category]} 줄기, 누적 생장도 ${score.toFixed(1)}`} onPointerEnter={(event) => moveTooltip(event, category)} onPointerMove={(event) => moveTooltip(event, category)} onPointerLeave={() => setHovered(null)} onClick={() => onSelect(category)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(category); } }}>
         <path className="fractal-hit" d={`M 500 500 L ${branch.startX.toFixed(1)} ${branch.startY.toFixed(1)}`} />
@@ -385,7 +392,7 @@ function ForestSilhouettes({ totalGrowth }: { totalGrowth: number }) {
 }
 
 function Foliage({ x, y, angle, jitter, score, color }: { x: number; y: number; angle: number; jitter: number; score: number; color: string }) {
-  const base = 2.6 + Math.min(score, 10) * .34;
+  const base = 2.6 + extendedGrowth(score, 10) * .34;
   const leafCount = score >= 5 ? 3 : score >= 2 ? 2 : 1;
   return <g className="fractal-foliage">
     {Array.from({ length: leafCount }, (_, index) => {
