@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen, ChevronLeft, CirclePlus, Eye, EyeOff, Leaf,
   LoaderCircle, LocateFixed, Menu, Minus, Plus, Settings, Sparkles,
@@ -152,6 +152,41 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
   }, []);
 
   useEffect(() => { void loadState(); }, [loadState]);
+
+  // Opening a dialog/sheet doesn't normally touch browser history, so on mobile the
+  // hardware/gesture back button has nothing app-related to undo and just leaves the
+  // page. Push a history entry while one is open and treat the resulting popstate as
+  // "close the overlay" instead of a real navigation. Closing any other way (X button,
+  // backdrop click, a successful save) then has to consume that pushed entry itself via
+  // history.back(), or the next real back-press would need pressing twice. That
+  // programmatic history.back() fires its own popstate, so suppressNextPopStateRef
+  // tells the listener to ignore that one rather than treating it as a second close.
+  const suppressNextPopStateRef = useRef(false);
+  const closedByBackButtonRef = useRef(false);
+  const overlayWasOpenRef = useRef(false);
+
+  useEffect(() => {
+    function handlePopState() {
+      if (suppressNextPopStateRef.current) { suppressNextPopStateRef.current = false; return; }
+      if (busy) return;
+      closedByBackButtonRef.current = true;
+      setOverlay(null);
+      setSelectedCategory(null);
+    }
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [busy]);
+
+  useEffect(() => {
+    const isOpen = Boolean(overlay || selectedCategory);
+    if (isOpen && !overlayWasOpenRef.current) {
+      window.history.pushState({ forainOverlay: true }, "");
+    } else if (!isOpen && overlayWasOpenRef.current) {
+      if (closedByBackButtonRef.current) closedByBackButtonRef.current = false;
+      else { suppressNextPopStateRef.current = true; window.history.back(); }
+    }
+    overlayWasOpenRef.current = isOpen;
+  }, [overlay, selectedCategory]);
 
   useEffect(() => {
     const context = (document as Document & { modelContext?: { registerTool?: (tool: unknown, options?: { signal?: AbortSignal }) => void | Promise<void> } }).modelContext;
