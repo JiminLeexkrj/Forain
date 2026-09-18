@@ -10,11 +10,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export function AuthScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState("");
+  const passwordMismatch = registerPasswordConfirm.length > 0 && registerPassword !== registerPasswordConfirm;
 
   async function submit(event: FormEvent<HTMLFormElement>, mode: "login" | "register") {
     event.preventDefault();
+    if (mode === "register" && registerPassword !== registerPasswordConfirm) {
+      setError("비밀번호가 서로 일치하지 않습니다.");
+      return;
+    }
     setBusy(true); setError("");
     const values = Object.fromEntries(new FormData(event.currentTarget));
+    delete values.passwordConfirm;
     try {
       const response = await fetch(`/api/auth/${mode}`, {
         method: "POST",
@@ -43,18 +51,19 @@ export function AuthScreen() {
       <TabsContent value="register"><form className="auth-form" onSubmit={(event) => void submit(event, "register")}>
         <AuthField id="register-name" name="displayName" label="사용자 이름" autoComplete="name" maxLength={30} />
         <AuthField id="register-id" name="loginId" label="아이디" description="영문 소문자, 숫자, 밑줄, 하이픈으로 4~24자" autoComplete="username" pattern="[A-Za-z0-9_-]{4,24}" />
-        <AuthField id="register-password" name="password" label="비밀번호" description="8자 이상 입력해 주세요" type="password" autoComplete="new-password" minLength={8} maxLength={72} />
+        <AuthField id="register-password" name="password" label="비밀번호" description="8자 이상 입력해 주세요" type="password" autoComplete="new-password" minLength={8} maxLength={72} value={registerPassword} onChange={(event) => setRegisterPassword(event.target.value)} />
+        <AuthField id="register-password-confirm" name="passwordConfirm" label="비밀번호 확인" description={passwordMismatch ? "비밀번호가 일치하지 않습니다" : undefined} invalid={passwordMismatch} type="password" autoComplete="new-password" minLength={8} maxLength={72} value={registerPasswordConfirm} onChange={(event) => setRegisterPasswordConfirm(event.target.value)} aria-invalid={passwordMismatch} />
         {error && <p className="auth-error" role="alert">{error}</p>}
-        <Button type="submit" disabled={busy}>{busy && <LoaderCircle className="spin" />}{busy ? "계정 만드는 중" : "계정 만들기"}</Button>
+        <Button type="submit" disabled={busy || passwordMismatch}>{busy && <LoaderCircle className="spin" />}{busy ? "계정 만드는 중" : "계정 만들기"}</Button>
       </form></TabsContent>
     </Tabs>
   </section></main>;
 }
 
-function AuthField({ id, label, description, type, ...props }: ComponentProps<typeof Input> & { id: string; label: string; description?: string }) {
+function AuthField({ id, label, description, invalid, type, ...props }: ComponentProps<typeof Input> & { id: string; label: string; description?: string; invalid?: boolean }) {
   const [visible, setVisible] = useState(false);
   const isPassword = type === "password";
-  return <div className="auth-field">
+  return <div className="auth-field" data-invalid={invalid || undefined}>
     <Label htmlFor={id}>{label}</Label>
     <div className="auth-field-control">
       <Input id={id} required type={isPassword && visible ? "text" : type} {...props} />
