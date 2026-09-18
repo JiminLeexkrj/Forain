@@ -68,9 +68,17 @@ function seededRandom(seed: number) {
   };
 }
 
+// Shortest signed rotation from `from` to `to`, in (-180, 180] degrees.
+function angleDiff(from: number, to: number) {
+  let diff = (to - from) % 360;
+  if (diff < -180) diff += 360;
+  if (diff > 180) diff -= 360;
+  return diff;
+}
+
 function fractalSegments(angle: number, score: number, split: number, seedKey: string) {
   const rand = seededRandom(hashSeed(seedKey));
-  const level = score <= 0 ? 0 : Math.min(4, Math.max(1, Math.floor(Math.log2(score + 1)) + 1));
+  const level = score <= 0 ? 0 : Math.min(5, Math.max(1, Math.floor(Math.log2(score + 1)) + 1));
   const radians = angle * Math.PI / 180;
   const startRadius = 66;
   const startX = 500 + Math.cos(radians) * startRadius;
@@ -80,7 +88,7 @@ function fractalSegments(angle: number, score: number, split: number, seedKey: s
     const wobble = (rand() - .5) * 16;
     const finalDirection = direction + wobble;
     const rad = finalDirection * Math.PI / 180;
-    const reach = length * (.85 + rand() * .3);
+    const reach = length * (.7 + rand() * .6);
     const endX = x + Math.cos(rad) * reach;
     const endY = y + Math.sin(rad) * reach;
     const bend = (rand() > .5 ? 1 : -1) * (3 + rand() * 6 + score * .4);
@@ -88,13 +96,22 @@ function fractalSegments(angle: number, score: number, split: number, seedKey: s
     const midY = (y + endY) / 2 + Math.cos(rad) * bend;
     segments.push({ d: `M ${x.toFixed(1)} ${y.toFixed(1)} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${endX.toFixed(1)} ${endY.toFixed(1)}`, depth, x: endX, y: endY, angle: finalDirection, jitter: rand() });
     if (depth >= level) return;
-    const nextLength = length * (.6 + Math.min(score, 12) * .004 + rand() * .08);
-    const spread = split * (.8 + rand() * .4);
+    const nextLength = length * (.55 + Math.min(score, 12) * .004 + rand() * .16);
+    const spread = split * (.75 + rand() * .5);
     grow(endX, endY, finalDirection - spread, nextLength, depth + 1);
     grow(endX, endY, finalDirection + spread, nextLength, depth + 1);
     if (depth > 0 && score >= 9 && rand() > .3) grow(endX, endY, finalDirection + (rand() - .5) * 12, nextLength * .8, depth + 1);
+    // A few high-growth stems also send a shoot that curves upward (toward -90deg),
+    // regardless of the branch's own base direction, so more score keeps reading as
+    // more growth instead of saturating the same fixed-direction fractal cone.
+    if (depth >= 1 && score >= 6 && rand() > .5) {
+      const upBias = Math.min(1, .35 + (score - 6) * .045 + rand() * .25);
+      const upDirection = finalDirection + angleDiff(finalDirection, -90) * upBias;
+      grow(endX, endY, upDirection, nextLength * (.7 + rand() * .35), depth + 1);
+    }
   };
-  grow(startX, startY, angle, 104 + level * 25 + Math.min(score, 12) * 3, 0);
+  const trunkLength = (104 + level * 25 + Math.min(score, 12) * 3) * (.85 + rand() * .3);
+  grow(startX, startY, angle, trunkLength, 0);
   return { segments, level, startX, startY };
 }
 
