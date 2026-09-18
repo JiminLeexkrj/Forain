@@ -145,7 +145,7 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
         body: JSON.stringify({ body, localDate: localDate() }),
       });
       if (!created.ok) throw new Error("편린을 저장하지 못했습니다.");
-      const { diary } = await created.json();
+      const { diary } = await created.json() as { diary: Diary };
       setActiveDiary(diary);
       setOverlay("analysis");
       const analyzed = await fetch(`/api/diaries/${diary.id}/analyze`, { method: "POST" });

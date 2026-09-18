@@ -94,7 +94,7 @@ export async function getSessionUser(): Promise<AppUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  let tokenBytes: Uint8Array;
+  let tokenBytes: Uint8Array<ArrayBuffer>;
   try { tokenBytes = decodeBytes(token); } catch { return null; }
   const tokenHash = encodeBytes(new Uint8Array(await crypto.subtle.digest("SHA-256", tokenBytes)));
   const user = await database().prepare(`
@@ -119,7 +119,7 @@ export async function deleteCurrentSession() {
   cookieStore.delete(SESSION_COOKIE);
 }
 
-async function derivePassword(password: string, salt: Uint8Array, iterations: number) {
+async function derivePassword(password: string, salt: Uint8Array<ArrayBuffer>, iterations: number) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, key, 256);
   return new Uint8Array(bits);

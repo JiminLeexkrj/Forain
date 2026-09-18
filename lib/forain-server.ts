@@ -1,8 +1,8 @@
-import { env } from "cloudflare:workers";
 import { getSessionUser } from "@/app/auth";
-import { database, nowIso } from "@/lib/database";
+import { database, nowIso, type D1PreparedStatement } from "@/lib/database";
 
 export { database, nowIso } from "@/lib/database";
+export type { D1PreparedStatement } from "@/lib/database";
 
 export type ExtractedActivity = {
   name: string;
@@ -69,12 +69,10 @@ export function mockAnalyze(body: string): ExtractedActivity[] {
 }
 
 export async function analyzeActivities(body: string): Promise<ExtractedActivity[]> {
-  const runtime = env as unknown as {
-    AI_MOCK_MODE?: string;
-    OPENAI_API_KEY?: string;
-    OPENAI_ACTIVITY_MODEL?: string;
-  };
-  if (runtime.AI_MOCK_MODE !== "false" || !runtime.OPENAI_API_KEY) return mockAnalyze(body);
+  const aiMockMode = process.env.AI_MOCK_MODE;
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  const openaiActivityModel = process.env.OPENAI_ACTIVITY_MODEL;
+  if (aiMockMode !== "false" || !openaiApiKey) return mockAnalyze(body);
 
   const categories = [
     "LEARNING", "WORK", "CREATIVE", "MUSIC", "EXERCISE", "SOCIAL",
@@ -83,11 +81,11 @@ export async function analyzeActivities(body: string): Promise<ExtractedActivity
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${runtime.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${openaiApiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: runtime.OPENAI_ACTIVITY_MODEL || "gpt-5.6-luna",
+      model: openaiActivityModel || "gpt-5.6-luna",
       input: [
         { role: "system", content: "사용자의 일기에서 사용자가 실제로 수행한 활동만 추출한다. 계획, 실패한 시도, 타인의 활동, 오래된 회상은 제외한다. 감정이나 성격을 추론하지 않는다." },
         { role: "user", content: body },

@@ -1,4 +1,5 @@
 import { analyzeActivities, database, jsonError, nowIso, requireApiUser } from "@/lib/forain-server";
+import type { D1PreparedStatement } from "@/lib/forain-server";
 
 export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {

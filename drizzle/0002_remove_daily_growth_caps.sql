@@ -1,7 +1,6 @@
 UPDATE `activity_growth_events`
 SET `applied_growth` = `raw_growth`
-WHERE `applied_growth` < `raw_growth`;
-
+WHERE `applied_growth` < `raw_growth`;--> statement-breakpoint
 UPDATE `daily_growth_ledgers`
 SET `applied_growth` = `raw_growth`,
     `category_cap` = 0,
