@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  BookOpen, ChevronLeft, CirclePlus, Eye, EyeOff, Home, Leaf,
+  BookOpen, ChevronLeft, CirclePlus, Eye, EyeOff, Leaf,
   LoaderCircle, LocateFixed, Menu, Minus, Plus, Settings, Sparkles,
   Sprout, Trash2, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
@@ -17,8 +20,8 @@ import {
   AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-type View = "home" | "diaries" | "editor" | "analysis" | "forest" | "settings";
-type Diary = { id: string; title: string; body: string; status: string; localDate: string; createdAt: string };
+type Overlay = "diaries" | "editor" | "analysis" | "settings" | null;
+type Diary = { id: string; body: string; status: string; localDate: string; createdAt: string };
 type Mention = { id: string; diaryId: string; name: string; category: string; confidence: number; evidence: string; status: string; growth: number; createdAt: string };
 type Growth = { category: string; appliedGrowth: number };
 type AppState = { diaries: Diary[]; mentions: Mention[]; growth: Growth[]; todayGrowth: number };
@@ -77,9 +80,8 @@ function localDate() {
 }
 
 export function ForainApp({ user, signOutPath }: { user: { name: string; email: string }; signOutPath: string }) {
-  const [view, setView] = useState<View>("forest");
+  const [overlay, setOverlay] = useState<Overlay>(null);
   const [state, setState] = useState<AppState>({ diaries: [], mentions: [], growth: [], todayGrowth: 0 });
-  const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [activeDiary, setActiveDiary] = useState<Diary | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -118,7 +120,7 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
         if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).length) {
           throw new Error("입력은 빈 객체여야 합니다.");
         }
-        setView("editor");
+        setOverlay("editor");
         return { view: "editor" };
       },
     }, { signal: controller.signal })).catch(() => undefined);
@@ -139,15 +141,14 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
     if (!body.trim()) { setError("편린 내용을 입력해 주세요."); return; }
     setBusy(true); setError("");
     try {
-      const endpoint = activeDiary ? `/api/diaries/${activeDiary.id}` : "/api/diaries";
-      const created = await fetch(endpoint, {
-        method: activeDiary ? "PATCH" : "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body, localDate: localDate() }),
+      const created = await fetch("/api/diaries", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body, localDate: localDate() }),
       });
       if (!created.ok) throw new Error("편린을 저장하지 못했습니다.");
       const { diary } = await created.json();
       setActiveDiary(diary);
-      setView("analysis");
+      setOverlay("analysis");
       const analyzed = await fetch(`/api/diaries/${diary.id}/analyze`, { method: "POST" });
       if (!analyzed.ok) throw new Error("활동을 채집하지 못했습니다. 편린은 안전하게 저장되었습니다.");
       await loadState();
@@ -163,7 +164,7 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
       const response = await fetch(`/api/diaries/${activeDiary.id}/analysis/confirm`, { method: "POST" });
       if (!response.ok) throw new Error("활동을 결숲에 반영하지 못했습니다.");
       await loadState();
-      setBody(""); setTitle(""); setView("forest");
+      setBody(""); setActiveDiary(null); setOverlay(null);
     } catch (confirmError) {
       setError(confirmError instanceof Error ? confirmError.message : "반영 중 오류가 발생했습니다.");
     } finally { setBusy(false); }
@@ -189,16 +190,9 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
     await loadState();
   }
 
-  function startNew() { setTitle(""); setBody(""); setActiveDiary(null); setError(""); setView("editor"); }
+  function startNew() { setBody(""); setActiveDiary(null); setError(""); setOverlay("editor"); }
   function changeScale(delta: number) { setScale((value) => Math.min(1.8, Math.max(.6, Number((value + delta).toFixed(1))))); }
   function resetCanvas() { setScale(1); setOffset({ x: 0, y: 0 }); }
-
-  const nav = [
-    { id: "home" as View, label: "오늘", icon: Home },
-    { id: "diaries" as View, label: "편린", icon: BookOpen },
-    { id: "forest" as View, label: "결숲", icon: Sprout },
-    { id: "settings" as View, label: "설정", icon: Settings },
-  ];
 
   return (
     <main className={`app-shell ${uiHidden ? "ui-hidden" : ""}`}>
@@ -206,7 +200,9 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
         <aside className={`side-panel glass ${menuOpen ? "open" : "closed"}`}>
           <div className="brand-row"><div className="brand-seed">F</div>{menuOpen && <strong>Forain</strong>}</div>
           <nav aria-label="주요 메뉴">
-            {nav.map((item) => <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => setView(item.id)} title={item.label}><item.icon />{menuOpen && <span>{item.label}</span>}</button>)}
+            <button className="active" title="결숲"><Sprout />{menuOpen && <span>결숲</span>}</button>
+            <button onClick={() => setOverlay("diaries")} title="편린"><BookOpen />{menuOpen && <span>편린</span>}</button>
+            <button onClick={() => setOverlay("settings")} title="설정"><Settings />{menuOpen && <span>설정</span>}</button>
           </nav>
           <button className="new-fragment" onClick={startNew}><CirclePlus />{menuOpen && <span>새 편린</span>}</button>
           <button className="collapse" onClick={() => setMenuOpen((value) => !value)}>{menuOpen ? <ChevronLeft /> : <Menu />}{menuOpen && <span>메뉴 접기</span>}</button>
@@ -215,8 +211,7 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
 
       <section className="workspace">
         {error && <div className="error-banner" role="alert"><span>{error}</span><button onClick={() => setError("")} aria-label="오류 닫기"><X /></button></div>}
-        {view === "forest" && (
-          <section className="forest-view" aria-label="나의 결숲">
+        <section className="forest-view" aria-label="나의 결숲">
             <div
               className="forest-canvas"
               onWheel={(event) => { event.preventDefault(); changeScale(event.deltaY > 0 ? -.1 : .1); }}
@@ -234,14 +229,16 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
             <Button className="hide-ui glass" variant="ghost" size="icon" onClick={() => setUiHidden((value) => !value)} aria-label={uiHidden ? "UI 보이기" : "UI 숨기기"}>{uiHidden ? <Eye /> : <EyeOff />}</Button>
             {!uiHidden && <Button className="floating-write" onClick={startNew}><Sparkles />오늘의 편린 작성</Button>}
           </section>
-        )}
-
-        {view === "home" && <Dashboard state={state} onNew={startNew} onForest={() => setView("forest")} />}
-        {view === "diaries" && <DiaryList diaries={state.diaries} onOpen={(diary) => { setActiveDiary(diary); setTitle(diary.title); setBody(diary.body); setView("editor"); }} onDelete={removeDiary} onNew={startNew} />}
-        {view === "editor" && <Editor title={title} body={body} setTitle={setTitle} setBody={setBody} busy={busy} onBack={() => setView("diaries")} onAnalyze={saveAndAnalyze} />}
-        {view === "analysis" && <Analysis diary={activeDiary} mentions={mentionsForDiary} busy={busy} onConfirm={confirmAnalysis} onBack={() => setView("editor")} onUpdate={updateMention} onDelete={removeMention} />}
-        {view === "settings" && <SettingsView user={user} signOutPath={signOutPath} />}
       </section>
+
+      <Dialog open={Boolean(overlay)} onOpenChange={(open) => { if (!open && !busy) setOverlay(null); }}>
+        <DialogContent className={`forest-overlay ${overlay === "editor" ? "writing-overlay" : ""} ${overlay === "analysis" ? "analysis-overlay" : ""}`}>
+          {overlay === "editor" && <Editor body={body} setBody={setBody} busy={busy} onAnalyze={saveAndAnalyze} />}
+          {overlay === "analysis" && <Analysis diary={activeDiary} mentions={mentionsForDiary} busy={busy} onConfirm={confirmAnalysis} onUpdate={updateMention} onDelete={removeMention} />}
+          {overlay === "diaries" && <DiaryList diaries={state.diaries} onDelete={removeDiary} onNew={startNew} onReview={(diary) => { setActiveDiary(diary); setOverlay("analysis"); }} />}
+          {overlay === "settings" && <SettingsView user={user} signOutPath={signOutPath} />}
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={Boolean(selectedCategory)} onOpenChange={(open) => !open && setSelectedCategory(null)}>
         <SheetContent className="activity-sheet">
@@ -299,22 +296,18 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
   </svg>;
 }
 
-function Dashboard({ state, onNew, onForest }: { state: AppState; onNew: () => void; onForest: () => void }) {
-  return <div className="content-page"><div className="page-heading"><p className="eyebrow">오늘의 기록</p><h1>천천히 쌓이는 하루</h1><Button onClick={onNew}><CirclePlus />새 편린 작성</Button></div><div className="dashboard-grid"><section className="paper-card"><span className="section-label">최근 편린</span><h2>{state.diaries[0]?.title || "아직 남긴 편린이 없어요"}</h2><p>{state.diaries[0]?.body || "오늘 기억하고 싶은 순간을 편린으로 남겨보세요."}</p></section><section className="stat-card"><Leaf /><span>확정된 활동</span><b>{state.mentions.filter((m) => m.status === "confirmed").length}</b></section><section className="stat-card"><Sprout /><span>오늘의 생장도</span><b>{state.todayGrowth.toFixed(1)}</b></section><section className="forest-callout"><div><span>나의 결숲</span><h2>활동의 흔적을 둘러보세요</h2></div><Button variant="outline" onClick={onForest}>결숲으로 이동</Button></section></div></div>;
+function DiaryList({ diaries, onDelete, onNew, onReview }: { diaries: Diary[]; onDelete: (id: string) => void; onNew: () => void; onReview: (diary: Diary) => void }) {
+  return <div className="overlay-page diary-overlay-page"><DialogHeader><p className="eyebrow">편린 보관함</p><DialogTitle>기록한 편린</DialogTitle><DialogDescription>한 번 남긴 편린은 수정되지 않고 그날의 모습으로 보관됩니다.</DialogDescription></DialogHeader><Button className="overlay-primary-action" onClick={onNew}><CirclePlus />새 편린</Button><div className="diary-list">{diaries.length ? diaries.map((diary) => <article key={diary.id} className="diary-row"><div className="diary-readonly"><time>{diary.localDate}</time><p>{diary.body}</p><div className="diary-state-row"><span className={`status ${diary.status}`}>{diary.status === "confirmed" ? "결숲에 반영됨" : diary.status === "analyzed" ? "활동 확인 대기" : "저장됨"}</span>{diary.status === "analyzed" && <Button size="sm" variant="outline" onClick={() => onReview(diary)}>활동 확인</Button>}</div></div><AlertDialog><AlertDialogTrigger asChild><Button variant="ghost" size="icon" aria-label="편린 삭제"><Trash2 /></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>이 편린을 삭제할까요?</AlertDialogTitle><AlertDialogDescription>연결된 활동과 생장도도 함께 다시 계산됩니다.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>취소</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => onDelete(diary.id)}>삭제</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></article>) : <div className="empty-state"><BookOpen /><h2>아직 편린이 없어요</h2><p>첫 기록을 남기면 결숲이 자라기 시작해요.</p><Button onClick={onNew}>첫 편린 쓰기</Button></div>}</div></div>;
 }
 
-function DiaryList({ diaries, onOpen, onDelete, onNew }: { diaries: Diary[]; onOpen: (diary: Diary) => void; onDelete: (id: string) => void; onNew: () => void }) {
-  return <div className="content-page"><div className="page-heading"><p className="eyebrow">편린 보관함</p><h1>기록한 편린</h1><Button onClick={onNew}><CirclePlus />새 편린</Button></div><div className="diary-list">{diaries.length ? diaries.map((diary) => <article key={diary.id} className="diary-row"><button onClick={() => onOpen(diary)}><time>{diary.localDate}</time><h2>{diary.title || "제목 없는 편린"}</h2><p>{diary.body}</p><span className={`status ${diary.status}`}>{diary.status === "confirmed" ? "결숲에 반영됨" : diary.status === "analyzed" ? "확인 대기" : "저장됨"}</span></button><AlertDialog><AlertDialogTrigger asChild><Button variant="ghost" size="icon" aria-label="편린 삭제"><Trash2 /></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>이 편린을 삭제할까요?</AlertDialogTitle><AlertDialogDescription>연결된 활동과 생장도도 함께 다시 계산됩니다.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>취소</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => onDelete(diary.id)}>삭제</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></article>) : <div className="empty-state"><BookOpen /><h2>아직 편린이 없어요</h2><p>첫 기록을 남기면 AI가 활동을 채집해 드려요.</p><Button onClick={onNew}>첫 편린 쓰기</Button></div>}</div></div>;
+function Editor({ body, setBody, busy, onAnalyze }: { body: string; setBody: (v: string) => void; busy: boolean; onAnalyze: () => void }) {
+  return <div className="popup-editor"><DialogHeader><p className="eyebrow">오늘의 편린</p><DialogTitle>{new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}</DialogTitle><DialogDescription>저장한 뒤에는 내용을 수정할 수 없어요.</DialogDescription></DialogHeader><section className="paper-editor"><textarea autoFocus aria-label="편린 내용" placeholder={"오늘 마음에 남은 일을 자유롭게 적어보세요.\n\n무엇을 했는지, 누구와 함께였는지, 어떤 순간이 기억나는지 편안하게 남겨도 좋아요."} value={body} onChange={(e) => setBody(e.target.value)} maxLength={12000} /><footer><span>{body.length.toLocaleString()}자</span><Button onClick={onAnalyze} disabled={busy || !body.trim()}>{busy ? <LoaderCircle className="spin" /> : <Sparkles />}{busy ? "활동을 채집하는 중" : "편린 남기기"}</Button></footer></section></div>;
 }
 
-function Editor({ title, body, setTitle, setBody, busy, onBack, onAnalyze }: { title: string; body: string; setTitle: (v: string) => void; setBody: (v: string) => void; busy: boolean; onBack: () => void; onAnalyze: () => void }) {
-  return <div className="editor-page"><header><Button variant="ghost" onClick={onBack}><ChevronLeft />돌아가기</Button><time>{new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}</time><span>자동 저장 준비됨</span></header><section className="paper-editor"><input aria-label="편린 제목" placeholder="편린 제목 (선택)" value={title} onChange={(e) => setTitle(e.target.value)} /><textarea aria-label="편린 내용" placeholder={"오늘 마음에 남은 일을 자유롭게 적어보세요.\n\n무엇을 했는지, 누구와 함께였는지, 어떤 순간이 기억나는지 편안하게 남겨도 좋아요."} value={body} onChange={(e) => setBody(e.target.value)} maxLength={12000} /><footer><span>{body.length.toLocaleString()}자</span><Button onClick={onAnalyze} disabled={busy || !body.trim()}>{busy ? <LoaderCircle className="spin" /> : <Sparkles />}{busy ? "활동을 채집하는 중" : "저장하고 채집 시작"}</Button></footer></section></div>;
-}
-
-function Analysis({ diary, mentions, busy, onConfirm, onBack, onUpdate, onDelete }: { diary: Diary | null; mentions: Mention[]; busy: boolean; onConfirm: () => void; onBack: () => void; onUpdate: (id: string, changes: { name?: string; category?: string }) => void; onDelete: (id: string) => void }) {
-  return <div className="analysis-page"><div className="page-heading"><p className="eyebrow">활동 채집 결과</p><h1>편린에서 발견한 활동</h1><p>결숲에 반영하기 전에 잘못 찾은 내용이 없는지 확인해 주세요.</p></div><section className="analysis-layout"><article className="paper-card source"><span className="section-label">원문</span><h2>{diary?.title || "제목 없는 편린"}</h2><p>{diary?.body}</p></article><div className="mention-list">{busy ? <div className="analyzing"><LoaderCircle className="spin" /><h2>편린을 천천히 살펴보고 있어요</h2><p>실제로 한 활동만 골라내고 있습니다.</p></div> : mentions.length ? mentions.map((mention) => <article key={mention.id} className="mention-card"><div className="category-dot" style={{ background: categoryColors[mention.category] }} /><div><select aria-label={`${mention.name} 카테고리`} value={mention.category} onChange={(event) => void onUpdate(mention.id, { category: event.target.value })}>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><input aria-label="활동 이름" value={mention.name} onChange={(event) => void onUpdate(mention.id, { name: event.target.value })} /><p>“{mention.evidence}”</p></div><div className="mention-actions"><b>{Math.round(mention.confidence * 100)}%</b><Button variant="ghost" size="icon" onClick={() => void onDelete(mention.id)} aria-label={`${mention.name} 삭제`}><Trash2 /></Button></div></article>) : <div className="analyzing"><Leaf /><h2>확정할 활동을 찾지 못했어요</h2><p>계획이나 다른 사람의 활동이 아니라, 오늘 직접 한 일을 적었는지 확인해 보세요.</p></div>}</div></section><footer className="analysis-actions"><Button variant="outline" onClick={onBack}>편린 수정</Button><Button onClick={onConfirm} disabled={busy || !mentions.length}>{busy ? <LoaderCircle className="spin" /> : <Sprout />}결숲에 반영</Button></footer></div>;
+function Analysis({ diary, mentions, busy, onConfirm, onUpdate, onDelete }: { diary: Diary | null; mentions: Mention[]; busy: boolean; onConfirm: () => void; onUpdate: (id: string, changes: { name?: string; category?: string }) => void; onDelete: (id: string) => void }) {
+  return <div className="overlay-page"><DialogHeader><p className="eyebrow">활동 채집 결과</p><DialogTitle>편린에서 발견한 활동</DialogTitle><DialogDescription>편린 원문은 보존되며, 결숲에 반영할 활동만 확인할 수 있어요.</DialogDescription></DialogHeader><section className="analysis-layout"><article className="paper-card source"><span className="section-label">남긴 편린</span><p>{diary?.body}</p></article><div className="mention-list">{busy ? <div className="analyzing"><LoaderCircle className="spin" /><h2>편린을 천천히 살펴보고 있어요</h2><p>실제로 한 활동만 골라내고 있습니다.</p></div> : mentions.length ? mentions.map((mention) => <article key={mention.id} className="mention-card"><div className="category-dot" style={{ background: categoryColors[mention.category] }} /><div><select aria-label={`${mention.name} 카테고리`} value={mention.category} onChange={(event) => void onUpdate(mention.id, { category: event.target.value })}>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><input aria-label="활동 이름" value={mention.name} onChange={(event) => void onUpdate(mention.id, { name: event.target.value })} /><p>“{mention.evidence}”</p></div><div className="mention-actions"><b>{Math.round(mention.confidence * 100)}%</b><Button variant="ghost" size="icon" onClick={() => void onDelete(mention.id)} aria-label={`${mention.name} 삭제`}><Trash2 /></Button></div></article>) : <div className="analyzing"><Leaf /><h2>확정할 활동을 찾지 못했어요</h2><p>오늘 직접 한 일을 적었는지 확인해 보세요.</p></div>}</div></section><footer className="analysis-actions"><Button onClick={onConfirm} disabled={busy || !mentions.length}>{busy ? <LoaderCircle className="spin" /> : <Sprout />}결숲에 반영</Button></footer></div>;
 }
 
 function SettingsView({ user, signOutPath }: { user: { name: string; email: string }; signOutPath: string }) {
-  return <div className="content-page settings-page"><div className="page-heading"><p className="eyebrow">설정</p><h1>나의 Forain</h1></div><section className="settings-card"><div><span>계정</span><h2>{user.name}</h2><p>{user.email}</p></div><a className="secondary-link" href={signOutPath} target="_top">로그아웃</a></section><section className="settings-card"><div><span>현지 시간대</span><h2>{Intl.DateTimeFormat().resolvedOptions().timeZone}</h2><p>일일 생장도는 현지 날짜 00:00를 기준으로 계산됩니다.</p></div></section><section className="settings-card danger"><div><span>계정 삭제</span><h2>모든 기록과 결숲 삭제</h2><p>MVP에서는 문의 후 처리됩니다. 데이터 구조는 일괄 삭제가 가능하도록 구성되어 있습니다.</p></div></section></div>;
+  return <div className="overlay-page settings-overlay-page"><DialogHeader><p className="eyebrow">설정</p><DialogTitle>나의 Forain</DialogTitle><DialogDescription>결숲을 떠나지 않고 계정 정보를 확인합니다.</DialogDescription></DialogHeader><section className="settings-card"><div><span>계정</span><h2>{user.name}</h2><p>{user.email}</p></div><a className="secondary-link" href={signOutPath} target="_top">로그아웃</a></section><section className="settings-card"><div><span>현지 시간대</span><h2>{Intl.DateTimeFormat().resolvedOptions().timeZone}</h2><p>일일 생장도는 현지 날짜 00:00를 기준으로 계산됩니다.</p></div></section><section className="settings-card danger"><div><span>계정 삭제</span><h2>모든 기록과 결숲 삭제</h2><p>MVP에서는 문의 후 처리됩니다.</p></div></section></div>;
 }

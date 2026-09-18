@@ -202,6 +202,20 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .detail-orbit { position: relative; width: 170px; height: 170px; margin: 18px auto 34px; border: 1px solid color-mix(in srgb, var(--category-color), transparent 38%); border-radius: 50%; box-shadow: 0 0 34px color-mix(in srgb, var(--category-color), transparent 74%), inset 0 0 35px color-mix(in srgb, var(--category-color), transparent 86%); }
 .detail-orbit span, .detail-orbit i, .detail-orbit b { position: absolute; inset: 50% auto auto 50%; display: block; background: var(--category-color); transform-origin: 0 50%; }
 .detail-orbit span { width: 72px; height: 4px; box-shadow: 0 0 12px var(--category-color); }.detail-orbit i { width: 57px; height: 2px; transform: rotate(120deg); }.detail-orbit b { width: 48px; height: 2px; transform: rotate(240deg); }
+[data-slot="dialog-overlay"] { background: rgba(1, 5, 3, .55); backdrop-filter: blur(9px) saturate(120%); -webkit-backdrop-filter: blur(9px) saturate(120%); }
+.forest-overlay { width: min(920px, calc(100vw - 36px)); max-width: 920px !important; max-height: calc(100vh - 42px); overflow: auto; gap: 22px; padding: clamp(24px, 4vw, 42px); border: 1px solid rgba(220,240,225,.17); border-radius: 28px; background: rgba(8, 17, 13, .88); color: #e8eee8; box-shadow: 0 38px 110px rgba(0,0,0,.58), inset 0 1px rgba(255,255,255,.06); backdrop-filter: blur(30px) saturate(135%); -webkit-backdrop-filter: blur(30px) saturate(135%); }
+.writing-overlay { width: min(760px, calc(100vw - 30px)); max-width: 760px !important; padding: clamp(18px, 3vw, 30px); background: rgba(7, 15, 11, .78); }
+.analysis-overlay { max-width: 1080px !important; }
+.overlay-page, .popup-editor { min-width: 0; }.overlay-page [data-slot="dialog-title"], .popup-editor [data-slot="dialog-title"] { font: 500 clamp(29px, 4vw, 42px)/1.12 Georgia, "Noto Serif KR", serif; letter-spacing: -.03em; }
+.overlay-page [data-slot="dialog-description"], .popup-editor [data-slot="dialog-description"] { color: #99a89e; font-size: 14px; line-height: 1.65; }
+.overlay-primary-action { position: absolute; top: 34px; right: 72px; }
+.popup-editor .paper-editor { min-height: min(64vh, 590px); margin: 0; padding: clamp(26px, 5vw, 56px); border-radius: 5px 24px 24px 5px; background-color: #121d18; }
+.popup-editor .paper-editor textarea { min-height: 340px; padding-top: 4px; font-size: 18px; }
+.diary-overlay-page .diary-list { max-height: min(64vh, 620px); margin-top: 24px; overflow: auto; padding-right: 4px; }
+.diary-readonly { min-width: 0; padding: 12px; }.diary-readonly time { color: #8d9b92; font-size: 12px; }.diary-readonly p { margin: 8px 0 12px; color: #d3ddd5; font: 16px/1.75 Georgia, "Noto Serif KR", serif; white-space: pre-wrap; }.diary-readonly .status { font-family: "Pretendard", system-ui, sans-serif; }
+.diary-state-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.settings-overlay-page .settings-card { max-width: none; margin-top: 14px; }
+.forest-overlay .analysis-layout { margin-top: 8px; }.forest-overlay .analysis-actions { margin-top: 18px; }
 
 @media (max-width: 900px) {
   .workspace, .side-panel.closed + .workspace { padding-left: 0; }
@@ -221,6 +235,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .fractal-canopy { top: 43%; width: 108vw; height: 108vw; }.branch-label { font-size: 18px; }.branch-score { font-size: 14px; }
   .growth-meter { left: 18px; right: 18px; top: auto; bottom: 84px; width: auto; }.zoom-controls { right: 18px; bottom: 150px; }.hide-ui { right: 18px; bottom: 208px; }.floating-write { bottom: 24px; }
   .content-page, .analysis-page { padding: 42px 20px 100px; }.page-heading > button { position: static; margin-top: 18px; }.dashboard-grid { grid-template-columns: 1fr; }.dashboard-grid .paper-card, .forest-callout { grid-column: auto; }.forest-callout { align-items: flex-start; flex-direction: column; gap: 18px; }
+  .forest-overlay { width: calc(100vw - 18px); max-height: calc(100vh - 18px); padding: 24px 18px; border-radius: 22px; }.overlay-primary-action { position: static; margin-top: 18px; }.popup-editor .paper-editor { min-height: 65vh; padding: 28px 22px; }.popup-editor .paper-editor textarea { min-height: 360px; }.forest-overlay .analysis-layout { grid-template-columns: 1fr; }.forest-overlay .analysis-layout .source { max-height: 180px; }.diary-overlay-page .diary-list { max-height: 65vh; }
   .editor-page { padding: 12px 12px 90px; }.editor-page > header { grid-template-columns: 1fr auto; }.editor-page > header > span { display: none; }.paper-editor { min-height: calc(100vh - 95px); padding: 28px 22px; border-radius: 4px 20px 20px 4px; }.paper-editor textarea { font-size: 17px; }
   .diary-row { grid-template-columns: 1fr auto; }.settings-card { align-items: flex-start; flex-direction: column; gap: 18px; }
 }
