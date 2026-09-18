@@ -65,17 +65,6 @@ function fractalSegments(angle: number, score: number, split: number) {
     const midX = (x + endX) / 2 - Math.sin(rad) * bend;
     const midY = (y + endY) / 2 + Math.cos(rad) * bend;
     segments.push({ d: `M ${x.toFixed(1)} ${y.toFixed(1)} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${endX.toFixed(1)} ${endY.toFixed(1)}`, depth, x: endX, y: endY });
-    if (depth === 0 && level >= 2) {
-      const lowerShoots = [
-        { at: .34, side: -1 },
-        { at: .58, side: 1 },
-      ];
-      for (const shoot of lowerShoots) {
-        const shootX = x + (endX - x) * shoot.at;
-        const shootY = y + (endY - y) * shoot.at;
-        grow(shootX, shootY, direction + shoot.side * (78 + split * .35), length * (.42 + score * .004), 2);
-      }
-    }
     if (depth >= level) return;
     const nextLength = length * (.62 + Math.min(score, 12) * .004);
     grow(endX, endY, direction - split, nextLength, depth + 1);
@@ -290,6 +279,7 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
     <circle className="fractal-field-ring inner" cx="500" cy="500" r="176" />
     {categoryOrder.map((category, index) => {
       const score = growth[category] || 0;
+      if (score <= 0) return null;
       const angle = -90 + index * 30;
       const color = categoryColors[category];
       const pattern = categoryPatterns[category];
