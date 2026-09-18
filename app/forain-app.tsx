@@ -38,18 +38,38 @@ const categoryColors: Record<string, string> = {
 };
 
 const categoryOrder = ["LEARNING", "MUSIC", "CREATIVE", "WORK", "SOCIAL", "CARE", "DAILY_LIFE", "REST", "TRAVEL", "CULTURE", "EXERCISE", "OTHER"];
-const categoryPatterns: Record<string, { dash: string; split: number; rhythm: string }> = {
-  LEARNING: { dash: "1 0", split: 24, rhythm: "결정" }, WORK: { dash: "10 3", split: 18, rhythm: "격자" },
-  CREATIVE: { dash: "3 2", split: 32, rhythm: "파동" }, MUSIC: { dash: "2 5", split: 27, rhythm: "박동" },
-  EXERCISE: { dash: "13 2", split: 21, rhythm: "맥박" }, SOCIAL: { dash: "7 4", split: 36, rhythm: "연결" },
-  CULTURE: { dash: "5 2 1 2", split: 30, rhythm: "층위" }, DAILY_LIFE: { dash: "8 2", split: 16, rhythm: "반복" },
-  REST: { dash: "1 5", split: 40, rhythm: "여백" }, TRAVEL: { dash: "11 4 2 4", split: 34, rhythm: "궤적" },
-  CARE: { dash: "4 3", split: 25, rhythm: "포옹" }, OTHER: { dash: "6 5", split: 29, rhythm: "변주" },
+const categoryPatterns: Record<string, { split: number; rhythm: string }> = {
+  LEARNING: { split: 24, rhythm: "결정" }, WORK: { split: 18, rhythm: "격자" },
+  CREATIVE: { split: 32, rhythm: "파동" }, MUSIC: { split: 27, rhythm: "박동" },
+  EXERCISE: { split: 21, rhythm: "맥박" }, SOCIAL: { split: 36, rhythm: "연결" },
+  CULTURE: { split: 30, rhythm: "층위" }, DAILY_LIFE: { split: 16, rhythm: "반복" },
+  REST: { split: 40, rhythm: "여백" }, TRAVEL: { split: 34, rhythm: "궤적" },
+  CARE: { split: 25, rhythm: "포옹" }, OTHER: { split: 29, rhythm: "변주" },
 };
 
-type FractalSegment = { d: string; depth: number; x: number; y: number };
+type FractalSegment = { d: string; depth: number; x: number; y: number; angle: number; jitter: number };
 
-function fractalSegments(angle: number, score: number, split: number) {
+// Deterministic PRNG so each category's branch shape stays stable across re-renders
+// (hover/state changes) while still reading as hand-grown rather than mirror-symmetric.
+function hashSeed(text: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index++) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function seededRandom(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+
+function fractalSegments(angle: number, score: number, split: number, seedKey: string) {
+  const rand = seededRandom(hashSeed(seedKey));
   const level = score <= 0 ? 0 : Math.min(4, Math.max(1, Math.floor(Math.log2(score + 1)) + 1));
   const radians = angle * Math.PI / 180;
   const startRadius = 66;
@@ -57,18 +77,22 @@ function fractalSegments(angle: number, score: number, split: number) {
   const startY = 500 + Math.sin(radians) * startRadius;
   const segments: FractalSegment[] = [];
   const grow = (x: number, y: number, direction: number, length: number, depth: number) => {
-    const rad = direction * Math.PI / 180;
-    const endX = x + Math.cos(rad) * length;
-    const endY = y + Math.sin(rad) * length;
-    const bend = (depth % 2 ? 1 : -1) * (4 + score * .45);
+    const wobble = (rand() - .5) * 16;
+    const finalDirection = direction + wobble;
+    const rad = finalDirection * Math.PI / 180;
+    const reach = length * (.85 + rand() * .3);
+    const endX = x + Math.cos(rad) * reach;
+    const endY = y + Math.sin(rad) * reach;
+    const bend = (rand() > .5 ? 1 : -1) * (3 + rand() * 6 + score * .4);
     const midX = (x + endX) / 2 - Math.sin(rad) * bend;
     const midY = (y + endY) / 2 + Math.cos(rad) * bend;
-    segments.push({ d: `M ${x.toFixed(1)} ${y.toFixed(1)} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${endX.toFixed(1)} ${endY.toFixed(1)}`, depth, x: endX, y: endY });
+    segments.push({ d: `M ${x.toFixed(1)} ${y.toFixed(1)} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${endX.toFixed(1)} ${endY.toFixed(1)}`, depth, x: endX, y: endY, angle: finalDirection, jitter: rand() });
     if (depth >= level) return;
-    const nextLength = length * (.62 + Math.min(score, 12) * .004);
-    grow(endX, endY, direction - split, nextLength, depth + 1);
-    grow(endX, endY, direction + split, nextLength, depth + 1);
-    if (depth > 0 && score >= 9) grow(endX, endY, direction, nextLength * .82, depth + 1);
+    const nextLength = length * (.6 + Math.min(score, 12) * .004 + rand() * .08);
+    const spread = split * (.8 + rand() * .4);
+    grow(endX, endY, finalDirection - spread, nextLength, depth + 1);
+    grow(endX, endY, finalDirection + spread, nextLength, depth + 1);
+    if (depth > 0 && score >= 9 && rand() > .3) grow(endX, endY, finalDirection + (rand() - .5) * 12, nextLength * .8, depth + 1);
   };
   grow(startX, startY, angle, 104 + level * 25 + Math.min(score, 12) * 3, 0);
   return { segments, level, startX, startY };
@@ -242,7 +266,7 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
       <Sheet open={Boolean(selectedCategory)} onOpenChange={(open) => !open && setSelectedCategory(null)}>
         <SheetContent className="activity-sheet">
           <SheetHeader><SheetTitle>{selectedCategory ? categoryLabels[selectedCategory] : ""}</SheetTitle><SheetDescription>이 줄기는 해당 카테고리의 누적 활동으로 자랍니다.</SheetDescription></SheetHeader>
-          {selectedCategory && <div className="category-detail"><div className="detail-orbit" style={{ "--category-color": categoryColors[selectedCategory] } as React.CSSProperties}><span /><i /><b /></div><dl><div><dt>누적 생장도</dt><dd>{categoryGrowth[selectedCategory].toFixed(1)}</dd></div><div><dt>고유 패턴</dt><dd>{categoryPatterns[selectedCategory].rhythm}</dd></div><div><dt>현재 단계</dt><dd>{fractalSegments(0, categoryGrowth[selectedCategory], categoryPatterns[selectedCategory].split).level + 1}단계</dd></div></dl></div>}
+          {selectedCategory && <div className="category-detail"><div className="detail-orbit" style={{ "--category-color": categoryColors[selectedCategory] } as React.CSSProperties}><span /><i /><b /></div><dl><div><dt>누적 생장도</dt><dd>{categoryGrowth[selectedCategory].toFixed(1)}</dd></div><div><dt>고유 패턴</dt><dd>{categoryPatterns[selectedCategory].rhythm}</dd></div><div><dt>현재 단계</dt><dd>{fractalSegments(0, categoryGrowth[selectedCategory], categoryPatterns[selectedCategory].split, selectedCategory).level + 1}단계</dd></div></dl></div>}
         </SheetContent>
       </Sheet>
     </main>
@@ -276,18 +300,18 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
       const angle = -90 + index * 30;
       const color = categoryColors[category];
       const pattern = categoryPatterns[category];
-      const branch = fractalSegments(angle, score, pattern.split);
+      const branch = fractalSegments(angle, score, pattern.split, category);
       const thickness = 2.4 + Math.min(score, 20) * .13;
       const active = !selected || selected === category;
       return <g key={category} className={`fractal-branch ${active ? "is-active" : "is-muted"}`} style={{ "--branch-color": color, "--branch-strength": Math.min(1, .25 + score / 12) } as React.CSSProperties} role="button" tabIndex={0} aria-label={`${categoryLabels[category]} 줄기, 누적 생장도 ${score.toFixed(1)}`} onPointerEnter={(event) => moveTooltip(event, category)} onPointerMove={(event) => moveTooltip(event, category)} onPointerLeave={() => setHovered(null)} onClick={() => onSelect(category)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(category); } }}>
         <path className="fractal-hit" d={`M 500 500 L ${branch.startX.toFixed(1)} ${branch.startY.toFixed(1)}`} />
         <path className="fractal-spoke halo" d={`M 500 500 L ${branch.startX.toFixed(1)} ${branch.startY.toFixed(1)}`} stroke={color} strokeWidth={thickness + 8} />
-        <path className="fractal-spoke" d={`M 500 500 L ${branch.startX.toFixed(1)} ${branch.startY.toFixed(1)}`} stroke={color} strokeWidth={thickness + 1.5} strokeDasharray={pattern.dash} />
+        <path className="fractal-spoke" d={`M 500 500 L ${branch.startX.toFixed(1)} ${branch.startY.toFixed(1)}`} stroke={color} strokeWidth={thickness + 1.5} />
         {branch.segments.map((segment, segmentIndex) => <g key={segmentIndex}>
           <path className="fractal-hit" d={segment.d} />
-          <path className="fractal-segment halo" d={segment.d} stroke={color} strokeWidth={Math.max(1.2, thickness * (1 - segment.depth * .17)) + 7} />
-          <path className="fractal-segment" d={segment.d} stroke={color} strokeWidth={Math.max(1.2, thickness * (1 - segment.depth * .17))} strokeDasharray={pattern.dash} filter={score > 3 ? `url(#glow-${category.toLowerCase()})` : undefined} />
-          {segment.depth === branch.level && score > 0 && <circle className="fractal-bud" cx={segment.x} cy={segment.y} r={2.5 + Math.min(score, 10) * .17} fill={color} />}
+          <path className="fractal-segment halo" d={segment.d} stroke={color} strokeWidth={Math.max(.9, thickness * (1 - segment.depth * .2)) + 7} />
+          <path className="fractal-segment" d={segment.d} stroke={color} strokeWidth={Math.max(.9, thickness * (1 - segment.depth * .2))} filter={score > 3 ? `url(#glow-${category.toLowerCase()})` : undefined} />
+          {segment.depth === branch.level && score > 0 && <Foliage x={segment.x} y={segment.y} angle={segment.angle} jitter={segment.jitter} score={score} color={color} />}
         </g>)}
       </g>;
     })}
@@ -311,6 +335,23 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
       <text x="27" y="-5">{categoryLabels[hovered.category]}</text>
     </g>}
   </svg>;
+}
+
+function Foliage({ x, y, angle, jitter, score, color }: { x: number; y: number; angle: number; jitter: number; score: number; color: string }) {
+  const base = 2.6 + Math.min(score, 10) * .34;
+  const leafCount = score >= 5 ? 3 : score >= 2 ? 2 : 1;
+  return <g className="fractal-foliage">
+    {Array.from({ length: leafCount }, (_, index) => {
+      const spread = (index - (leafCount - 1) / 2) * (16 + jitter * 10);
+      const variance = (jitter * 37 + index * 53) % 1;
+      const size = base * (.78 + variance * .5);
+      const leafAngle = angle + spread;
+      const rad = leafAngle * Math.PI / 180;
+      const cx = x + Math.cos(rad) * size * 1.05;
+      const cy = y + Math.sin(rad) * size * 1.05;
+      return <ellipse key={index} className="fractal-bud" cx={cx} cy={cy} rx={size * 1.9} ry={size * .95} fill={color} transform={`rotate(${leafAngle.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})`} />;
+    })}
+  </g>;
 }
 
 function DiaryList({ diaries, onDelete, onNew, onReview }: { diaries: Diary[]; onDelete: (id: string) => void; onNew: () => void; onReview: (diary: Diary) => void }) {
