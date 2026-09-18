@@ -292,6 +292,9 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
 
 function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, number>; selected: string | null; onSelect: (category: string) => void }) {
   const [hovered, setHovered] = useState<{ category: string; x: number; y: number } | null>(null);
+  const totalGrowth = Object.values(growth).reduce((sum, value) => sum + value, 0);
+  const nucleusScale = 1 + Math.min(.7, Math.log2(totalGrowth + 1) * .09);
+  const nucleusStrength = Math.min(1, Math.log2(totalGrowth + 1) * .16);
 
   const moveTooltip = (event: React.PointerEvent<SVGGElement>, category: string) => {
     const svg = event.currentTarget.ownerSVGElement;
@@ -332,7 +335,7 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
         </g>)}
       </g>;
     })}
-    <g className="nucleus-tangle" aria-hidden="true">
+    <g className="nucleus-tangle" aria-hidden="true" style={{ transform: `scale(${nucleusScale.toFixed(3)})`, transformOrigin: "500px 500px", "--nucleus-strength": nucleusStrength.toFixed(3) } as React.CSSProperties}>
       <path d="M 456 489 C 468 457 518 451 541 477 C 559 498 538 533 506 542 C 474 551 448 526 456 489" />
       <path d="M 462 516 C 471 480 520 465 542 493 C 557 513 526 543 493 537 C 461 532 449 503 468 477" />
       <path d="M 471 465 C 500 478 532 472 548 501 C 531 516 509 531 479 526 C 451 521 452 487 471 465" />
