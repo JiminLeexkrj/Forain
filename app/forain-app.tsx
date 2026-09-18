@@ -252,10 +252,6 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
 
 function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, number>; selected: string | null; onSelect: (category: string) => void }) {
   const [hovered, setHovered] = useState<{ category: string; x: number; y: number } | null>(null);
-  const ringPoints = categoryOrder.map((_, index) => {
-    const angle = (-90 + index * 30) * Math.PI / 180;
-    return `${(500 + Math.cos(angle) * 67).toFixed(1)},${(500 + Math.sin(angle) * 67).toFixed(1)}`;
-  }).join(" ");
 
   const moveTooltip = (event: React.PointerEvent<SVGGElement>, category: string) => {
     const svg = event.currentTarget.ownerSVGElement;
@@ -270,8 +266,6 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
 
   return <svg className="fractal-canopy" viewBox="0 0 1000 1000" role="img" aria-label="중앙 핵에서 열두 카테고리의 줄기가 프랙탈 구조로 자라는 결숲" onPointerLeave={() => setHovered(null)}>
     <defs>
-      <radialGradient id="nucleus" cx="42%" cy="38%"><stop offset="0" stopColor="#efffd5" /><stop offset=".22" stopColor="#a8ed83" /><stop offset=".58" stopColor="#335a46" /><stop offset="1" stopColor="#0a1712" /></radialGradient>
-      <filter id="core-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="13" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
       {categoryOrder.map((category) => <filter key={category} id={`glow-${category.toLowerCase()}`} x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>)}
     </defs>
     <circle className="fractal-field-ring outer" cx="500" cy="500" r="392" />
@@ -284,7 +278,7 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
       const color = categoryColors[category];
       const pattern = categoryPatterns[category];
       const branch = fractalSegments(angle, score, pattern.split);
-      const thickness = 2.2 + Math.min(score, 16) * .52;
+      const thickness = 2.4 + Math.min(score, 20) * .13;
       const active = !selected || selected === category;
       return <g key={category} className={`fractal-branch ${active ? "is-active" : "is-muted"}`} style={{ "--branch-color": color, "--branch-strength": Math.min(1, .25 + score / 12) } as React.CSSProperties} role="button" tabIndex={0} aria-label={`${categoryLabels[category]} 줄기, 누적 생장도 ${score.toFixed(1)}`} onPointerEnter={(event) => moveTooltip(event, category)} onPointerMove={(event) => moveTooltip(event, category)} onPointerLeave={() => setHovered(null)} onClick={() => onSelect(category)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(category); } }}>
         <path className="fractal-hit" d={`M 500 500 L ${branch.startX.toFixed(1)} ${branch.startY.toFixed(1)}`} />
@@ -298,11 +292,20 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
         </g>)}
       </g>;
     })}
-    <polygon className="nucleus-ring" points={ringPoints} />
-    <circle className="nucleus-aura" cx="500" cy="500" r="52" fill="#9edf79" filter="url(#core-glow)" />
-    <circle className="nucleus-core" cx="500" cy="500" r="43" fill="url(#nucleus)" />
-    <circle className="nucleus-pulse" cx="500" cy="500" r="57" />
-    <text className="nucleus-label" x="500" y="505" textAnchor="middle">핵</text>
+    <g className="nucleus-tangle" aria-hidden="true">
+      <path d="M 456 489 C 468 457 518 451 541 477 C 559 498 538 533 506 542 C 474 551 448 526 456 489" />
+      <path d="M 462 516 C 471 480 520 465 542 493 C 557 513 526 543 493 537 C 461 532 449 503 468 477" />
+      <path d="M 471 465 C 500 478 532 472 548 501 C 531 516 509 531 479 526 C 451 521 452 487 471 465" />
+      <path d="M 447 501 C 468 489 480 452 510 458 C 539 464 552 491 538 520 C 523 550 477 546 459 525" />
+      <path d="M 483 451 C 472 480 474 516 504 544 C 523 529 546 507 539 478 C 513 468 489 476 463 502" />
+      <path d="M 451 511 C 475 519 507 505 527 471 C 548 484 552 515 526 535 C 500 554 467 535 462 503" />
+      <path d="M 464 476 C 489 489 516 492 547 480 C 539 512 515 536 484 539 C 466 520 456 498 464 476" />
+      <path d="M 474 542 C 481 518 495 491 529 462 C 548 480 546 508 529 529 C 504 538 480 526 452 493" />
+      <path d="M 451 487 C 477 469 505 469 543 510 C 525 526 495 543 469 530 C 455 511 458 493 478 458" />
+      <path d="M 459 522 C 487 505 519 507 546 490 C 538 472 513 455 488 459 C 473 482 467 511 493 543" />
+      <path d="M 475 468 C 493 496 515 521 542 524 C 548 498 532 474 505 458 C 483 467 463 487 455 514" />
+      <path d="M 452 498 C 479 535 518 548 542 507 C 529 481 502 467 474 475 C 457 490 459 513 478 535" />
+    </g>
     {hovered && <g className="branch-cursor-label" transform={`translate(${Math.min(860, hovered.x + 18)} ${Math.min(935, hovered.y + 20)})`} pointerEvents="none">
       <rect x="0" y="-28" width={categoryLabels[hovered.category].length > 4 ? 112 : 82} height="38" rx="12" />
       <circle cx="15" cy="-9" r="4" fill={categoryColors[hovered.category]} />

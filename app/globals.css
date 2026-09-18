@@ -162,13 +162,12 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .fractal-bud { opacity: calc(.36 + var(--branch-strength) * .62); filter: drop-shadow(0 0 7px var(--branch-color)); animation: bud-pulse 3.6s ease-in-out infinite; }
 .branch-cursor-label rect { fill: rgba(7, 17, 12, .94); stroke: rgba(221, 240, 226, .2); stroke-width: 1px; filter: drop-shadow(0 8px 14px rgba(0,0,0,.5)); }
 .branch-cursor-label text { fill: #edf4ee; font: 650 14px/1 "Pretendard", "Noto Sans KR", sans-serif; letter-spacing: .02em; }
-.nucleus-ring { fill: rgba(135, 184, 151, .05); stroke: rgba(210, 240, 210, .28); stroke-width: 1.5; }
-.nucleus-aura { opacity: .23; }.nucleus-core { stroke: rgba(239,255,218,.74); stroke-width: 1.3; }
-.nucleus-pulse { fill: none; stroke: rgba(190,240,148,.44); stroke-width: 1.4; transform-origin: 500px 500px; animation: nucleus-pulse 4s ease-out infinite; }
-.nucleus-label { fill: #f1ffe0; font: 700 13px/1 Georgia, serif; letter-spacing: .12em; filter: drop-shadow(0 1px 5px #000); }
+.nucleus-tangle { fill: none; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 5px 9px rgba(0, 0, 0, .72)) drop-shadow(0 0 9px rgba(139, 91, 48, .3)); }
+.nucleus-tangle path { stroke: #765033; stroke-width: 6.5; opacity: .86; vector-effect: non-scaling-stroke; }
+.nucleus-tangle path:nth-child(3n + 1) { stroke: #9a6840; stroke-width: 5; }
+.nucleus-tangle path:nth-child(3n + 2) { stroke: #503522; stroke-width: 8; opacity: .78; }
 @keyframes fractal-flow { to { stroke-dashoffset: -48; } }
 @keyframes bud-pulse { 50% { opacity: 1; r: 4.8px; } }
-@keyframes nucleus-pulse { 0% { transform: scale(.82); opacity: .8; } 75%, 100% { transform: scale(1.42); opacity: 0; } }
 .veins path { stroke: rgba(187, 220, 139, .28); stroke-width: .42; stroke-dasharray: 1.2 1; filter: drop-shadow(0 0 4px rgba(190, 234, 138, .25)); }
 .forest-core { position: absolute; z-index: 8; left: 50%; top: 53%; width: clamp(210px, 23vw, 330px); aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; }
 .forest-core img { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 26px 32px rgba(0,0,0,.65)) drop-shadow(0 0 24px rgba(193, 231, 126, .15)); animation: core-breathe 6s ease-in-out infinite; }
