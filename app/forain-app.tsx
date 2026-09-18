@@ -177,6 +177,8 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
     Number(state.growth.find((item) => item.category === category)?.appliedGrowth || 0),
   ])), [state.growth]);
 
+  const totalGrowth = useMemo(() => Object.values(categoryGrowth).reduce((sum, value) => sum + value, 0), [categoryGrowth]);
+
   async function saveAndAnalyze() {
     if (!body.trim()) { setError("편린 내용을 입력해 주세요."); return; }
     setBusy(true); setError("");
@@ -254,13 +256,15 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
         <section className="forest-view" aria-label="나의 결숲">
             <div
               className="forest-canvas"
+              style={{ "--forest-mist": Math.min(1, Math.log2(totalGrowth + 1) * .15).toFixed(3) } as React.CSSProperties}
               onWheel={(event) => { event.preventDefault(); changeScale(event.deltaY > 0 ? -.1 : .1); }}
               onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); setDrag({ x: event.clientX - offset.x, y: event.clientY - offset.y }); }}
               onPointerMove={(event) => drag && setOffset({ x: event.clientX - drag.x, y: event.clientY - drag.y })}
               onPointerUp={() => setDrag(null)}
             >
+              <div className="forest-mist" aria-hidden="true" />
               <div className="forest-world" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}>
-                <FractalCanopy growth={categoryGrowth} selected={selectedCategory} onSelect={setSelectedCategory} />
+                <FractalCanopy growth={categoryGrowth} totalGrowth={totalGrowth} selected={selectedCategory} onSelect={setSelectedCategory} />
               </div>
             </div>
             {!uiHidden && <div className="forest-heading"><p>{new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</p><h1>{user.name.split("@")[0]}님의 결숲</h1><span>열두 줄기는 활동의 결을 따라 서로 다른 방식으로 자랍니다.</span></div>}
@@ -290,9 +294,8 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
   );
 }
 
-function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, number>; selected: string | null; onSelect: (category: string) => void }) {
+function FractalCanopy({ growth, totalGrowth, selected, onSelect }: { growth: Record<string, number>; totalGrowth: number; selected: string | null; onSelect: (category: string) => void }) {
   const [hovered, setHovered] = useState<{ category: string; x: number; y: number } | null>(null);
-  const totalGrowth = Object.values(growth).reduce((sum, value) => sum + value, 0);
   const nucleusScale = 1 + Math.min(.7, Math.log2(totalGrowth + 1) * .09);
   const nucleusStrength = Math.min(1, Math.log2(totalGrowth + 1) * .16);
 
@@ -308,6 +311,7 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
   };
 
   return <svg className="fractal-canopy" viewBox="0 0 1000 1000" role="img" aria-label="중앙 핵에서 열두 카테고리의 줄기가 프랙탈 구조로 자라는 결숲" onPointerLeave={() => setHovered(null)}>
+    <ForestSilhouettes totalGrowth={totalGrowth} />
     <defs>
       {categoryOrder.map((category) => <filter key={category} id={`glow-${category.toLowerCase()}`} x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>)}
     </defs>
@@ -355,6 +359,29 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
       <text x="27" y="-5">{categoryLabels[hovered.category]}</text>
     </g>}
   </svg>;
+}
+
+function ForestSilhouettes({ totalGrowth }: { totalGrowth: number }) {
+  const count = Math.min(20, Math.floor(totalGrowth / 4));
+  if (count <= 0) return null;
+  const rand = seededRandom(hashSeed("forest-silhouettes"));
+  return <g className="forest-silhouettes" aria-hidden="true">
+    {Array.from({ length: count }, (_, index) => {
+      // Golden-angle scatter keeps trees from clustering or lining up with the 12 category spokes.
+      const angle = (index * 137.5 + rand() * 20) % 360;
+      const radius = 420 + rand() * 60;
+      const rad = angle * Math.PI / 180;
+      const cx = 500 + Math.cos(rad) * radius;
+      const cy = 500 + Math.sin(rad) * radius;
+      const scale = 0.6 + rand() * 0.7;
+      const rotate = (rand() - .5) * 12;
+      const opacity = (0.35 + rand() * 0.35).toFixed(2);
+      return <g key={index} className="forest-silhouette" style={{ opacity }} transform={`translate(${cx.toFixed(1)} ${cy.toFixed(1)}) scale(${scale.toFixed(2)}) rotate(${rotate.toFixed(1)})`}>
+        <path d="M 0 -60 L 16 -20 L 6 -20 L 22 15 L -22 15 L -6 -20 L -16 -20 Z" />
+        <rect x="-4" y="15" width="8" height="10" />
+      </g>;
+    })}
+  </g>;
 }
 
 function Foliage({ x, y, angle, jitter, score, color }: { x: number; y: number; angle: number; jitter: number; score: number; color: string }) {

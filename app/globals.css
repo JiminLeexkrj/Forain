@@ -159,9 +159,12 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .forest-canvas { background: radial-gradient(circle at 50% 52%, rgba(83, 133, 111, .14), transparent 28%), radial-gradient(circle at 50% 50%, #091510 0%, #040906 58%, #020403 100%); }
 .forest-canvas::before { background-image: linear-gradient(rgba(132,174,151,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(132,174,151,.035) 1px, transparent 1px); background-size: 48px 48px; opacity: .5; mask-image: radial-gradient(circle at center, black, transparent 78%); }
 .forest-canvas::after { inset: 0; height: auto; background: radial-gradient(circle at center, transparent 42%, rgba(0,0,0,.58) 100%); }
+.forest-mist { position: absolute; inset: 0; z-index: 4; background: radial-gradient(ellipse at 50% 78%, rgba(190, 214, 190, .5) 0%, rgba(150, 190, 170, .22) 32%, transparent 62%); opacity: var(--forest-mist, 0); transition: opacity 1.2s ease; }
 .fractal-canopy { position: absolute; left: 50%; top: 52%; width: min(92vw, 92vh); height: min(92vw, 92vh); overflow: visible; transform: translate(-50%, -50%); }
 .fractal-field-ring { fill: none; stroke: rgba(183, 220, 197, .075); stroke-width: 1; stroke-dasharray: 2 9; }
 .fractal-field-ring.middle { stroke-dasharray: 1 12; }.fractal-field-ring.inner { stroke: rgba(189, 225, 199, .11); stroke-dasharray: 2 6; }
+.forest-silhouettes { pointer-events: none; filter: blur(1.5px); }
+.forest-silhouette path, .forest-silhouette rect { fill: #1f3a32; }
 .fractal-branch { outline: none; cursor: pointer; transition: opacity .35s ease, filter .35s ease; }
 .fractal-branch.is-muted { opacity: .16; }.fractal-branch:hover, .fractal-branch:focus-visible { opacity: 1; filter: brightness(1.32); }
 .fractal-hit { fill: none; stroke: transparent; stroke-width: 22px; pointer-events: stroke; vector-effect: non-scaling-stroke; }
