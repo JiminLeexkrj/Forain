@@ -22,6 +22,13 @@
       "when": 1789785000000,
       "tag": "0002_remove_daily_growth_caps",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789748560108,
+      "tag": "0003_glorious_triton",
+      "breakpoints": true
     }
   ]
 }

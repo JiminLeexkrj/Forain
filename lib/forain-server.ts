@@ -1,5 +1,8 @@
 import { env } from "cloudflare:workers";
-import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { getSessionUser } from "@/app/auth";
+import { database, nowIso } from "@/lib/database";
+
+export { database, nowIso } from "@/lib/database";
 
 export type ExtractedActivity = {
   name: string;
@@ -10,18 +13,9 @@ export type ExtractedActivity = {
 };
 
 export async function requireApiUser() {
-  const user = await getChatGPTUser();
+  const user = await getSessionUser();
   if (!user) throw new Response("Unauthorized", { status: 401 });
   return user;
-}
-
-export function database() {
-  if (!env.DB) throw new Error("DB_UNAVAILABLE");
-  return env.DB;
-}
-
-export function nowIso() {
-  return new Date().toISOString();
 }
 
 export function currentLocalDate(timeZone = "Asia/Seoul") {

@@ -78,7 +78,7 @@ function localDate() {
   return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 
-export function ForainApp({ user, signOutPath }: { user: { name: string; email: string }; signOutPath: string }) {
+export function ForainApp({ user }: { user: { name: string; loginId: string } }) {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [state, setState] = useState<AppState>({ diaries: [], mentions: [], growth: [], todayGrowth: 0 });
   const [body, setBody] = useState("");
@@ -235,7 +235,7 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
           {overlay === "editor" && <Editor body={body} setBody={setBody} busy={busy} onAnalyze={saveAndAnalyze} />}
           {overlay === "analysis" && <Analysis diary={activeDiary} mentions={mentionsForDiary} busy={busy} onConfirm={confirmAnalysis} onUpdate={updateMention} onDelete={removeMention} />}
           {overlay === "diaries" && <DiaryList diaries={state.diaries} onDelete={removeDiary} onNew={startNew} onReview={(diary) => { setActiveDiary(diary); setOverlay("analysis"); }} />}
-          {overlay === "settings" && <SettingsView user={user} signOutPath={signOutPath} />}
+          {overlay === "settings" && <SettingsView user={user} />}
         </DialogContent>
       </Dialog>
 
@@ -325,6 +325,7 @@ function Analysis({ diary, mentions, busy, onConfirm, onUpdate, onDelete }: { di
   return <div className="overlay-page"><DialogHeader><p className="eyebrow">활동 채집 결과</p><DialogTitle>편린에서 발견한 활동</DialogTitle><DialogDescription>편린 원문은 보존되며, 결숲에 반영할 활동만 확인할 수 있어요.</DialogDescription></DialogHeader><section className="analysis-layout"><article className="paper-card source"><span className="section-label">남긴 편린</span><p>{diary?.body}</p></article><div className="mention-list">{busy ? <div className="analyzing"><LoaderCircle className="spin" /><h2>편린을 천천히 살펴보고 있어요</h2><p>실제로 한 활동만 골라내고 있습니다.</p></div> : mentions.length ? mentions.map((mention) => <article key={mention.id} className="mention-card"><div className="category-dot" style={{ background: categoryColors[mention.category] }} /><div><select aria-label={`${mention.name} 카테고리`} value={mention.category} onChange={(event) => void onUpdate(mention.id, { category: event.target.value })}>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><input aria-label="활동 이름" value={mention.name} onChange={(event) => void onUpdate(mention.id, { name: event.target.value })} /><p>“{mention.evidence}”</p></div><div className="mention-actions"><b>{Math.round(mention.confidence * 100)}%</b><Button variant="ghost" size="icon" onClick={() => void onDelete(mention.id)} aria-label={`${mention.name} 삭제`}><Trash2 /></Button></div></article>) : <div className="analyzing"><Leaf /><h2>확정할 활동을 찾지 못했어요</h2><p>오늘 직접 한 일을 적었는지 확인해 보세요.</p></div>}</div></section><footer className="analysis-actions"><Button onClick={onConfirm} disabled={busy || !mentions.length}>{busy ? <LoaderCircle className="spin" /> : <Sprout />}결숲에 반영</Button></footer></div>;
 }
 
-function SettingsView({ user, signOutPath }: { user: { name: string; email: string }; signOutPath: string }) {
-  return <div className="overlay-page settings-overlay-page"><DialogHeader><p className="eyebrow">설정</p><DialogTitle>나의 Forain</DialogTitle><DialogDescription>결숲을 떠나지 않고 계정 정보를 확인합니다.</DialogDescription></DialogHeader><section className="settings-card"><div><span>계정</span><h2>{user.name}</h2><p>{user.email}</p></div><a className="secondary-link" href={signOutPath} target="_top">로그아웃</a></section><section className="settings-card"><div><span>현지 시간대</span><h2>{Intl.DateTimeFormat().resolvedOptions().timeZone}</h2><p>일일 생장도는 현지 날짜 00:00를 기준으로 계산됩니다.</p></div></section><section className="settings-card danger"><div><span>계정 삭제</span><h2>모든 기록과 결숲 삭제</h2><p>MVP에서는 문의 후 처리됩니다.</p></div></section></div>;
+function SettingsView({ user }: { user: { name: string; loginId: string } }) {
+  async function signOut() { await fetch("/api/auth/logout", { method: "POST" }); window.location.href = "/"; }
+  return <div className="overlay-page settings-overlay-page"><DialogHeader><p className="eyebrow">설정</p><DialogTitle>나의 Forain</DialogTitle><DialogDescription>결숲을 떠나지 않고 계정 정보를 확인합니다.</DialogDescription></DialogHeader><section className="settings-card"><div><span>계정</span><h2>{user.name}</h2><p>@{user.loginId}</p></div><Button variant="outline" onClick={() => void signOut()}>로그아웃</Button></section><section className="settings-card"><div><span>현지 시간대</span><h2>{Intl.DateTimeFormat().resolvedOptions().timeZone}</h2><p>날짜는 현지 시간대를 기준으로 기록됩니다.</p></div></section><section className="settings-card danger"><div><span>계정 삭제</span><h2>모든 기록과 결숲 삭제</h2><p>MVP에서는 문의 후 처리됩니다.</p></div></section></div>;
 }
