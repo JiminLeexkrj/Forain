@@ -30,18 +30,47 @@ const categoryLabels: Record<string, string> = {
 };
 
 const categoryColors: Record<string, string> = {
-  LEARNING: "#9ed56b", WORK: "#73a77a", CREATIVE: "#d5b86d", MUSIC: "#a48ad1",
-  EXERCISE: "#6fc6a4", SOCIAL: "#df9679", CULTURE: "#77a5c7", DAILY_LIFE: "#b7c97a",
-  REST: "#7fa0b9", TRAVEL: "#d19b67", CARE: "#d7869b", OTHER: "#91a78c",
+  LEARNING: "#63e6ff", WORK: "#ffbd59", CREATIVE: "#ff6fd8", MUSIC: "#aa8cff",
+  EXERCISE: "#8df06d", SOCIAL: "#ff8066", CULTURE: "#5c9dff", DAILY_LIFE: "#d7c768",
+  REST: "#7184d8", TRAVEL: "#45e0c1", CARE: "#ff82a9", OTHER: "#b8c7bd",
 };
 
-const samplePlants = [
-  { key: "LEARNING", x: 28, y: 41, growth: 2.4, name: "책 읽기", angle: -154 },
-  { key: "MUSIC", x: 53, y: 25, growth: 1.6, name: "기타 연습", angle: -84 },
-  { key: "SOCIAL", x: 75, y: 61, growth: 1.2, name: "친구와 식사", angle: 26 },
-];
+const categoryOrder = ["LEARNING", "MUSIC", "CREATIVE", "WORK", "SOCIAL", "CARE", "DAILY_LIFE", "REST", "TRAVEL", "CULTURE", "EXERCISE", "OTHER"];
+const categoryPatterns: Record<string, { dash: string; split: number; rhythm: string }> = {
+  LEARNING: { dash: "1 0", split: 24, rhythm: "결정" }, WORK: { dash: "10 3", split: 18, rhythm: "격자" },
+  CREATIVE: { dash: "3 2", split: 32, rhythm: "파동" }, MUSIC: { dash: "2 5", split: 27, rhythm: "박동" },
+  EXERCISE: { dash: "13 2", split: 21, rhythm: "맥박" }, SOCIAL: { dash: "7 4", split: 36, rhythm: "연결" },
+  CULTURE: { dash: "5 2 1 2", split: 30, rhythm: "층위" }, DAILY_LIFE: { dash: "8 2", split: 16, rhythm: "반복" },
+  REST: { dash: "1 5", split: 40, rhythm: "여백" }, TRAVEL: { dash: "11 4 2 4", split: 34, rhythm: "궤적" },
+  CARE: { dash: "4 3", split: 25, rhythm: "포옹" }, OTHER: { dash: "6 5", split: 29, rhythm: "변주" },
+};
 
-const plantImages = ["/forest/fern.png", "/forest/flowering-vine.png"];
+type FractalSegment = { d: string; depth: number; x: number; y: number };
+
+function fractalSegments(angle: number, score: number, split: number) {
+  const level = score <= 0 ? 0 : Math.min(4, Math.max(1, Math.floor(Math.log2(score + 1)) + 1));
+  const radians = angle * Math.PI / 180;
+  const startRadius = 66;
+  const startX = 500 + Math.cos(radians) * startRadius;
+  const startY = 500 + Math.sin(radians) * startRadius;
+  const segments: FractalSegment[] = [];
+  const grow = (x: number, y: number, direction: number, length: number, depth: number) => {
+    const rad = direction * Math.PI / 180;
+    const endX = x + Math.cos(rad) * length;
+    const endY = y + Math.sin(rad) * length;
+    const bend = (depth % 2 ? 1 : -1) * (4 + score * .45);
+    const midX = (x + endX) / 2 - Math.sin(rad) * bend;
+    const midY = (y + endY) / 2 + Math.cos(rad) * bend;
+    segments.push({ d: `M ${x.toFixed(1)} ${y.toFixed(1)} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${endX.toFixed(1)} ${endY.toFixed(1)}`, depth, x: endX, y: endY });
+    if (depth >= level) return;
+    const nextLength = length * (.62 + Math.min(score, 12) * .004);
+    grow(endX, endY, direction - split, nextLength, depth + 1);
+    grow(endX, endY, direction + split, nextLength, depth + 1);
+    if (depth > 0 && score >= 9) grow(endX, endY, direction, nextLength * .82, depth + 1);
+  };
+  grow(startX, startY, angle, 104 + level * 25 + Math.min(score, 12) * 3, 0);
+  return { segments, level, startX, startY };
+}
 
 function localDate() {
   return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -53,7 +82,7 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [activeDiary, setActiveDiary] = useState<Diary | null>(null);
-  const [selected, setSelected] = useState<Mention | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(true);
@@ -101,24 +130,10 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
     [state.mentions, activeDiary],
   );
 
-  const plants = useMemo(() => {
-    const confirmed = state.mentions.filter((mention) => mention.status === "confirmed");
-    if (!confirmed.length) return samplePlants;
-    return confirmed.map((mention, index) => {
-      const angle = -150 + ((index * 137.5 + mention.name.length * 11) % 300);
-      const radius = 23 + ((index * 9 + mention.name.length * 3) % 14);
-      const radians = angle * Math.PI / 180;
-      return {
-        key: mention.category,
-        name: mention.name,
-        growth: mention.growth || 1,
-        x: 50 + Math.cos(radians) * radius,
-        y: 53 + Math.sin(radians) * radius * .72,
-        angle,
-        mention,
-      };
-    });
-  }, [state.mentions]);
+  const categoryGrowth = useMemo(() => Object.fromEntries(categoryOrder.map((category) => [
+    category,
+    Number(state.growth.find((item) => item.category === category)?.appliedGrowth || 0),
+  ])), [state.growth]);
 
   async function saveAndAnalyze() {
     if (!body.trim()) { setError("편린 내용을 입력해 주세요."); return; }
@@ -209,36 +224,11 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
               onPointerMove={(event) => drag && setOffset({ x: event.clientX - drag.x, y: event.clientY - drag.y })}
               onPointerUp={() => setDrag(null)}
             >
-              <div className="forest-haze one" /><div className="forest-haze two" />
-              <div className="water" /><div className="moss moss-a" /><div className="moss moss-b" />
               <div className="forest-world" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}>
-                <svg className="veins" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                  {plants.map((plant, index) => <path key={index} d={`M 50 53 Q ${(50 + plant.x) / 2 + (index % 2 ? 4 : -4)} ${(53 + plant.y) / 2} ${plant.x} ${plant.y}`} />)}
-                </svg>
-                <div className="forest-core" aria-label="결숲의 생명 핵">
-                  <span className="core-aura" />
-                  <img src="/forest/forest-core.png" alt="이끼와 뿌리로 이루어진 둥근 결숲의 생명 핵" draggable={false} />
-                  <span className="core-caption">기억의 핵<small>모든 성장은 여기에서 시작돼요</small></span>
-                </div>
-                {plants.map((plant, index) => {
-                  const size = 96 + Math.min(72, plant.growth * 15);
-                  const color = categoryColors[plant.key] || categoryColors.OTHER;
-                  return (
-                    <button
-                      key={`${plant.name}-${index}`}
-                      className="plant"
-                      style={{ left: `${plant.x}%`, top: `${plant.y}%`, width: size, height: size * 1.18, "--plant-color": color, "--lean": `${plant.angle + 90}deg` } as React.CSSProperties}
-                      onClick={() => "mention" in plant && setSelected(plant.mention || null)}
-                      aria-label={`${plant.name}, 생장도 ${plant.growth.toFixed(1)}`}
-                    >
-                      <img className="plant-image" src={plantImages[index % plantImages.length]} alt="" draggable={false} />
-                      <span className="plant-label"><b>{plant.name}</b><small>생장도 {plant.growth.toFixed(1)}</small></span>
-                    </button>
-                  );
-                })}
+                <FractalCanopy growth={categoryGrowth} selected={selectedCategory} onSelect={setSelectedCategory} />
               </div>
             </div>
-            {!uiHidden && <div className="forest-heading"><p>{new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</p><h1>{user.name.split("@")[0]}님의 결숲</h1><span>확정된 활동이 쌓일수록 숲의 밀도가 깊어집니다.</span></div>}
+            {!uiHidden && <div className="forest-heading"><p>{new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</p><h1>{user.name.split("@")[0]}님의 결숲</h1><span>열두 줄기는 활동의 결을 따라 서로 다른 방식으로 자랍니다.</span></div>}
             {!uiHidden && <div className="growth-meter glass"><div><span>오늘 반영된 생장도</span><b>{state.todayGrowth.toFixed(1)} / 10.0</b></div><Progress value={state.todayGrowth * 10} /><small>{state.todayGrowth >= 10 ? "오늘의 생장은 충분히 반영되었어요" : "오늘도 결숲이 천천히 자라고 있어요"}</small></div>}
             {!uiHidden && <div className="zoom-controls glass"><Button variant="ghost" size="icon" onClick={() => changeScale(-.1)} aria-label="축소"><Minus /></Button><span>{Math.round(scale * 100)}%</span><Button variant="ghost" size="icon" onClick={() => changeScale(.1)} aria-label="확대"><Plus /></Button><Button variant="ghost" size="icon" onClick={resetCanvas} aria-label="위치 초기화"><LocateFixed /></Button></div>}
             <Button className="hide-ui glass" variant="ghost" size="icon" onClick={() => setUiHidden((value) => !value)} aria-label={uiHidden ? "UI 보이기" : "UI 숨기기"}>{uiHidden ? <Eye /> : <EyeOff />}</Button>
@@ -253,14 +243,60 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
         {view === "settings" && <SettingsView user={user} signOutPath={signOutPath} />}
       </section>
 
-      <Sheet open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
+      <Sheet open={Boolean(selectedCategory)} onOpenChange={(open) => !open && setSelectedCategory(null)}>
         <SheetContent className="activity-sheet">
-          <SheetHeader><SheetTitle>{selected?.name}</SheetTitle><SheetDescription>{selected ? categoryLabels[selected.category] : ""}에서 자라는 활동</SheetDescription></SheetHeader>
-          {selected && <div className="activity-content"><div className="detail-plant"><img src="/forest/fern.png" alt={`${selected.name}을 상징하는 식물`} /></div><dl><div><dt>생장도</dt><dd>{selected.growth.toFixed(1)}</dd></div><div><dt>확신도</dt><dd>{Math.round(selected.confidence * 100)}%</dd></div><div><dt>발견한 문장</dt><dd>{selected.evidence}</dd></div></dl></div>}
+          <SheetHeader><SheetTitle>{selectedCategory ? categoryLabels[selectedCategory] : ""}</SheetTitle><SheetDescription>이 줄기는 해당 카테고리의 누적 활동으로 자랍니다.</SheetDescription></SheetHeader>
+          {selectedCategory && <div className="category-detail"><div className="detail-orbit" style={{ "--category-color": categoryColors[selectedCategory] } as React.CSSProperties}><span /><i /><b /></div><dl><div><dt>누적 생장도</dt><dd>{categoryGrowth[selectedCategory].toFixed(1)}</dd></div><div><dt>고유 패턴</dt><dd>{categoryPatterns[selectedCategory].rhythm}</dd></div><div><dt>현재 단계</dt><dd>{fractalSegments(0, categoryGrowth[selectedCategory], categoryPatterns[selectedCategory].split).level + 1}단계</dd></div></dl></div>}
         </SheetContent>
       </Sheet>
     </main>
   );
+}
+
+function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, number>; selected: string | null; onSelect: (category: string) => void }) {
+  const ringPoints = categoryOrder.map((_, index) => {
+    const angle = (-90 + index * 30) * Math.PI / 180;
+    return `${(500 + Math.cos(angle) * 67).toFixed(1)},${(500 + Math.sin(angle) * 67).toFixed(1)}`;
+  }).join(" ");
+
+  return <svg className="fractal-canopy" viewBox="0 0 1000 1000" role="img" aria-label="중앙 핵에서 열두 카테고리의 줄기가 프랙탈 구조로 자라는 결숲">
+    <defs>
+      <radialGradient id="nucleus" cx="42%" cy="38%"><stop offset="0" stopColor="#efffd5" /><stop offset=".22" stopColor="#a8ed83" /><stop offset=".58" stopColor="#335a46" /><stop offset="1" stopColor="#0a1712" /></radialGradient>
+      <filter id="core-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="13" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+      {categoryOrder.map((category) => <filter key={category} id={`glow-${category.toLowerCase()}`} x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>)}
+    </defs>
+    <circle className="fractal-field-ring outer" cx="500" cy="500" r="392" />
+    <circle className="fractal-field-ring middle" cx="500" cy="500" r="286" />
+    <circle className="fractal-field-ring inner" cx="500" cy="500" r="176" />
+    {categoryOrder.map((category, index) => {
+      const score = growth[category] || 0;
+      const angle = -90 + index * 30;
+      const color = categoryColors[category];
+      const pattern = categoryPatterns[category];
+      const branch = fractalSegments(angle, score, pattern.split);
+      const thickness = 2.2 + Math.min(score, 16) * .52;
+      const active = !selected || selected === category;
+      const labelAngle = angle * Math.PI / 180;
+      const labelX = 500 + Math.cos(labelAngle) * 375;
+      const labelY = 500 + Math.sin(labelAngle) * 375;
+      const labelAnchor = Math.abs(Math.cos(labelAngle)) < .2 ? "middle" : Math.cos(labelAngle) > 0 ? "start" : "end";
+      return <g key={category} className={`fractal-branch ${active ? "is-active" : "is-muted"}`} style={{ "--branch-color": color, "--branch-strength": Math.min(1, .25 + score / 12) } as React.CSSProperties} role="button" tabIndex={0} aria-label={`${categoryLabels[category]} 줄기, 누적 생장도 ${score.toFixed(1)}`} onClick={() => onSelect(category)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(category); } }}>
+        <path className="fractal-spoke halo" d={`M 500 500 L ${branch.startX.toFixed(1)} ${branch.startY.toFixed(1)}`} stroke={color} strokeWidth={thickness + 8} />
+        <path className="fractal-spoke" d={`M 500 500 L ${branch.startX.toFixed(1)} ${branch.startY.toFixed(1)}`} stroke={color} strokeWidth={thickness + 1.5} strokeDasharray={pattern.dash} />
+        {branch.segments.map((segment, segmentIndex) => <g key={segmentIndex}>
+          <path className="fractal-segment halo" d={segment.d} stroke={color} strokeWidth={Math.max(1.2, thickness * (1 - segment.depth * .17)) + 7} />
+          <path className="fractal-segment" d={segment.d} stroke={color} strokeWidth={Math.max(1.2, thickness * (1 - segment.depth * .17))} strokeDasharray={pattern.dash} filter={score > 3 ? `url(#glow-${category.toLowerCase()})` : undefined} />
+          {segment.depth === branch.level && score > 0 && <circle className="fractal-bud" cx={segment.x} cy={segment.y} r={2.5 + Math.min(score, 10) * .17} fill={color} />}
+        </g>)}
+        <text className="branch-label" x={labelX} y={labelY} textAnchor={labelAnchor} dominantBaseline="middle" fill={color}><tspan>{categoryLabels[category]}</tspan><tspan className="branch-score" x={labelX} dy="16">{score.toFixed(1)}</tspan></text>
+      </g>;
+    })}
+    <polygon className="nucleus-ring" points={ringPoints} />
+    <circle className="nucleus-aura" cx="500" cy="500" r="52" fill="#9edf79" filter="url(#core-glow)" />
+    <circle className="nucleus-core" cx="500" cy="500" r="43" fill="url(#nucleus)" />
+    <circle className="nucleus-pulse" cx="500" cy="500" r="57" />
+    <text className="nucleus-label" x="500" y="505" textAnchor="middle">핵</text>
+  </svg>;
 }
 
 function Dashboard({ state, onNew, onForest }: { state: AppState; onNew: () => void; onForest: () => void }) {
