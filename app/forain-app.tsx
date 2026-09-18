@@ -36,10 +36,12 @@ const categoryColors: Record<string, string> = {
 };
 
 const samplePlants = [
-  { key: "LEARNING", x: 26, y: 54, growth: 2.4, name: "책 읽기" },
-  { key: "MUSIC", x: 50, y: 40, growth: 1.6, name: "기타 연습" },
-  { key: "SOCIAL", x: 72, y: 60, growth: 1.2, name: "친구와 식사" },
+  { key: "LEARNING", x: 28, y: 41, growth: 2.4, name: "책 읽기", angle: -154 },
+  { key: "MUSIC", x: 53, y: 25, growth: 1.6, name: "기타 연습", angle: -84 },
+  { key: "SOCIAL", x: 75, y: 61, growth: 1.2, name: "친구와 식사", angle: 26 },
 ];
+
+const plantImages = ["/forest/fern.png", "/forest/flowering-vine.png"];
 
 function localDate() {
   return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -102,14 +104,20 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
   const plants = useMemo(() => {
     const confirmed = state.mentions.filter((mention) => mention.status === "confirmed");
     if (!confirmed.length) return samplePlants;
-    return confirmed.map((mention, index) => ({
-      key: mention.category,
-      name: mention.name,
-      growth: mention.growth || 1,
-      x: 18 + ((index * 29 + mention.name.length * 7) % 68),
-      y: 28 + ((index * 23 + mention.name.length * 5) % 48),
-      mention,
-    }));
+    return confirmed.map((mention, index) => {
+      const angle = -150 + ((index * 137.5 + mention.name.length * 11) % 300);
+      const radius = 23 + ((index * 9 + mention.name.length * 3) % 14);
+      const radians = angle * Math.PI / 180;
+      return {
+        key: mention.category,
+        name: mention.name,
+        growth: mention.growth || 1,
+        x: 50 + Math.cos(radians) * radius,
+        y: 53 + Math.sin(radians) * radius * .72,
+        angle,
+        mention,
+      };
+    });
   }, [state.mentions]);
 
   async function saveAndAnalyze() {
@@ -205,20 +213,25 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
               <div className="water" /><div className="moss moss-a" /><div className="moss moss-b" />
               <div className="forest-world" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}>
                 <svg className="veins" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                  {plants.slice(1).map((plant, index) => <path key={index} d={`M ${plants[0].x} ${plants[0].y} Q 50 ${30 + index * 18} ${plant.x} ${plant.y}`} />)}
+                  {plants.map((plant, index) => <path key={index} d={`M 50 53 Q ${(50 + plant.x) / 2 + (index % 2 ? 4 : -4)} ${(53 + plant.y) / 2} ${plant.x} ${plant.y}`} />)}
                 </svg>
+                <div className="forest-core" aria-label="결숲의 생명 핵">
+                  <span className="core-aura" />
+                  <img src="/forest/forest-core.png" alt="이끼와 뿌리로 이루어진 둥근 결숲의 생명 핵" draggable={false} />
+                  <span className="core-caption">기억의 핵<small>모든 성장은 여기에서 시작돼요</small></span>
+                </div>
                 {plants.map((plant, index) => {
-                  const size = 54 + Math.min(80, plant.growth * 12);
+                  const size = 96 + Math.min(72, plant.growth * 15);
                   const color = categoryColors[plant.key] || categoryColors.OTHER;
                   return (
                     <button
                       key={`${plant.name}-${index}`}
                       className="plant"
-                      style={{ left: `${plant.x}%`, top: `${plant.y}%`, width: size, height: size + 34, "--plant-color": color, "--lean": `${(index % 3 - 1) * 7}deg` } as React.CSSProperties}
+                      style={{ left: `${plant.x}%`, top: `${plant.y}%`, width: size, height: size * 1.18, "--plant-color": color, "--lean": `${plant.angle + 90}deg` } as React.CSSProperties}
                       onClick={() => "mention" in plant && setSelected(plant.mention || null)}
                       aria-label={`${plant.name}, 생장도 ${plant.growth.toFixed(1)}`}
                     >
-                      <span className="stem" /><span className="leaf leaf-l" /><span className="leaf leaf-r" /><span className="leaf leaf-top" />
+                      <img className="plant-image" src={plantImages[index % plantImages.length]} alt="" draggable={false} />
                       <span className="plant-label"><b>{plant.name}</b><small>생장도 {plant.growth.toFixed(1)}</small></span>
                     </button>
                   );
@@ -243,7 +256,7 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
       <Sheet open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
         <SheetContent className="activity-sheet">
           <SheetHeader><SheetTitle>{selected?.name}</SheetTitle><SheetDescription>{selected ? categoryLabels[selected.category] : ""}에서 자라는 활동</SheetDescription></SheetHeader>
-          {selected && <div className="activity-content"><div className="detail-plant" style={{ "--plant-color": categoryColors[selected.category] } as React.CSSProperties}><span /><span /><span /></div><dl><div><dt>생장도</dt><dd>{selected.growth.toFixed(1)}</dd></div><div><dt>확신도</dt><dd>{Math.round(selected.confidence * 100)}%</dd></div><div><dt>발견한 문장</dt><dd>{selected.evidence}</dd></div></dl></div>}
+          {selected && <div className="activity-content"><div className="detail-plant"><img src="/forest/fern.png" alt={`${selected.name}을 상징하는 식물`} /></div><dl><div><dt>생장도</dt><dd>{selected.growth.toFixed(1)}</dd></div><div><dt>확신도</dt><dd>{Math.round(selected.confidence * 100)}%</dd></div><div><dt>발견한 문장</dt><dd>{selected.evidence}</dd></div></dl></div>}
         </SheetContent>
       </Sheet>
     </main>
