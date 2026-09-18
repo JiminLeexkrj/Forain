@@ -7,7 +7,6 @@ import {
   Sprout, Trash2, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -224,7 +223,7 @@ export function ForainApp({ user, signOutPath }: { user: { name: string; email: 
               </div>
             </div>
             {!uiHidden && <div className="forest-heading"><p>{new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</p><h1>{user.name.split("@")[0]}님의 결숲</h1><span>열두 줄기는 활동의 결을 따라 서로 다른 방식으로 자랍니다.</span></div>}
-            {!uiHidden && <div className="growth-meter glass"><div><span>오늘 반영된 생장도</span><b>{state.todayGrowth.toFixed(1)} / 10.0</b></div><Progress value={state.todayGrowth * 10} /><small>{state.todayGrowth >= 10 ? "오늘의 생장은 충분히 반영되었어요" : "오늘도 결숲이 천천히 자라고 있어요"}</small></div>}
+            {!uiHidden && <div className="growth-meter glass"><div><span>오늘 반영된 생장도</span><b>{state.todayGrowth.toFixed(1)}</b></div><small>기록한 활동만큼 제한 없이 자라고 있어요</small></div>}
             {!uiHidden && <div className="zoom-controls glass"><Button variant="ghost" size="icon" onClick={() => changeScale(-.1)} aria-label="축소"><Minus /></Button><span>{Math.round(scale * 100)}%</span><Button variant="ghost" size="icon" onClick={() => changeScale(.1)} aria-label="확대"><Plus /></Button><Button variant="ghost" size="icon" onClick={resetCanvas} aria-label="위치 초기화"><LocateFixed /></Button></div>}
             <Button className="hide-ui glass" variant="ghost" size="icon" onClick={() => setUiHidden((value) => !value)} aria-label={uiHidden ? "UI 보이기" : "UI 숨기기"}>{uiHidden ? <Eye /> : <EyeOff />}</Button>
             {!uiHidden && <Button className="floating-write" onClick={startNew}><Sparkles />오늘의 편린 작성</Button>}

@@ -15,6 +15,13 @@
       "when": 1789743991880,
       "tag": "0001_set_learning_score_20",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789785000000,
+      "tag": "0002_remove_daily_growth_caps",
+      "breakpoints": true
     }
   ]
 }

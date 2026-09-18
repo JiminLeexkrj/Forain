@@ -17,6 +17,6 @@ export async function GET() {
       `).bind(user.userId).all(),
       db.prepare("SELECT category, applied_growth AS appliedGrowth FROM daily_growth_ledgers WHERE user_id = ? AND local_date = ? ORDER BY category").bind(user.userId, currentLocalDate()).all(),
     ]);
-    return Response.json({ plants: plants.results || [], today: today.results || [], categoryCap: 3, totalCap: 10 });
+    return Response.json({ plants: plants.results || [], today: today.results || [], limitsEnabled: false, categoryCap: null, totalCap: null });
   } catch (error) { return jsonError(error); }
 }

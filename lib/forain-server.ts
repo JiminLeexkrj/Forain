@@ -1,9 +1,6 @@
 import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 
-export const CATEGORY_CAP = 3;
-export const TOTAL_CAP = 10;
-
 export type ExtractedActivity = {
   name: string;
   category: string;
@@ -147,23 +144,16 @@ export async function recalculateDay(userId: string, localDate: string) {
   const rows = events.results || [];
   const rawByCategory = new Map<string, number>();
   for (const row of rows) rawByCategory.set(row.category, (rawByCategory.get(row.category) || 0) + row.rawGrowth);
-  const cappedByCategory = new Map([...rawByCategory].map(([category, raw]) => [category, Math.min(raw, CATEGORY_CAP)]));
-  const cappedSum = [...cappedByCategory.values()].reduce((sum, value) => sum + value, 0);
-  const totalRatio = cappedSum > TOTAL_CAP ? TOTAL_CAP / cappedSum : 1;
   const statements: D1PreparedStatement[] = [];
   for (const row of rows) {
-    const categoryRaw = rawByCategory.get(row.category) || 1;
-    const categoryApplied = (cappedByCategory.get(row.category) || 0) * totalRatio;
-    const eventApplied = categoryApplied * (row.rawGrowth / categoryRaw);
-    statements.push(db.prepare("UPDATE activity_growth_events SET applied_growth = ? WHERE id = ? AND user_id = ?").bind(eventApplied, row.id, userId));
+    statements.push(db.prepare("UPDATE activity_growth_events SET applied_growth = ? WHERE id = ? AND user_id = ?").bind(row.rawGrowth, row.id, userId));
   }
   statements.push(db.prepare("DELETE FROM daily_growth_ledgers WHERE user_id = ? AND local_date = ?").bind(userId, localDate));
   const timestamp = nowIso();
   for (const [category, raw] of rawByCategory) {
-    const applied = (cappedByCategory.get(category) || 0) * totalRatio;
     statements.push(db.prepare(
       "INSERT INTO daily_growth_ledgers (id, user_id, local_date, category, raw_growth, applied_growth, category_cap, total_cap, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).bind(crypto.randomUUID(), userId, localDate, category, raw, applied, CATEGORY_CAP, TOTAL_CAP, timestamp));
+    ).bind(crypto.randomUUID(), userId, localDate, category, raw, raw, 0, 0, timestamp));
   }
   if (statements.length) await db.batch(statements);
 }
