@@ -1,87 +1,92 @@
 # Forain
 
-Forain은 자체 아이디·비밀번호 인증과 서버 세션을 사용하는 개인 일기·결숲 애플리케이션입니다. ChatGPT 계정이나 인증 헤더에 의존하지 않습니다.
+Forain(결숲)은 자체 아이디·비밀번호 인증과 서버 세션을 사용하는 개인 일기·성장 시각화 애플리케이션입니다. 남긴 일기(편린)에서 AI가 실제 수행한 활동을 추출하고, 확정된 활동만큼 카테고리별 "결숲"이 자랍니다.
 
-현재 Sites 배포에서는 D1을 사용합니다. 향후 GitHub와 Vercel로 이전할 때의 인증·데이터베이스 전환 기준은 [docs/vercel-deployment.md](docs/vercel-deployment.md)를 참고하세요.
+Next.js 16(App Router) 기반이며, [Vercel](https://vercel.com)에 배포되고 [Turso](https://turso.tech)(libSQL)를 데이터베이스로 사용합니다.
 
-A clean full-stack starter running on [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and Drizzle support.
+## 기술 스택
+
+- **프레임워크**: Next.js 16 + React 19
+- **데이터베이스**: Turso(libSQL), `@libsql/client` + Drizzle ORM(`drizzle-orm/sqlite-core`)
+- **인증**: 자체 아이디/비밀번호 (PBKDF2-SHA256 해시, opaque 세션 토큰, HttpOnly 쿠키), 계정 단위 로그인 시도 제한 포함
+- **AI 분석**: OpenAI Responses API(JSON Schema 강제) 또는 규칙 기반 Mock 분석기
+- **UI**: Tailwind CSS 4, Radix/shadcn 계열 컴포넌트
 
 ## Prerequisites
 
 - Node.js `>=22.13.0`
-- Portable: Windows, macOS, or Linux; no Bash required
-- Managed Linux: managed Linux runtime with Bash, `flock`, `curl`, `sha256sum`, and GNU `timeout`
-- Git is required only for publishing
+- [Turso](https://turso.tech) 계정과 데이터베이스 (무료 플랜으로 충분)
+- (선택) OpenAI API 키 — 없으면 `AI_MOCK_MODE=true`로 규칙 기반 분석기를 사용합니다
 
-## Sites Lifecycle
-
-The Sites initializer copies the shared starter and selects managed-linux only when `SITES_MANAGED_LINUX_CONTAINER=1`; otherwise it selects portable. It saves the selection only in ignored `.sites-runtime/execution-profile.json`. Both profiles copy/configure first, then use the plugin's separate `install-dependencies.mjs` step to measure installation independently. Edit source under `app/` and follow the Sites skill for installation, preview, builds, and publishing.
-
-Whenever reopening or moving a checkout, run `node <plugin-root>/scripts/configure-execution-profile.mjs` before project commands. Profile changes do not alter tracked source or require reinstalling otherwise-valid dependencies; restart an existing preview to use the new selection. Do not commit or upload `.sites-runtime/`.
-
-This starter does not use `wrangler.jsonc`.
-
-`install:ci` runs `npm ci` once against the shared lockfile, disables parent-workspace discovery, and includes required dev/optional dependencies despite production/omit settings. Sharp defaults to prebuilt binaries unless explicitly configured otherwise. Do not overlap installers.
-
-- **Portable:** Preserve host HOME, npm cache, registry, proxy, temporary paths, retry/concurrency settings, and lifecycle-script policy. Use `--prefer-offline --no-audit --no-fund`.
-- **Managed Linux:** Use the existing project-local HOME/cache/tmp setup and Linux install lock, tarball preflight, and timeout. Restore the image-seeded npm cache only when its lockfile hash matches; retain network fallback. Builds keep their existing timeout. These helpers are not invoked by the portable profile.
-
-`scripts/sites-env.mjs` preserves the caller's HOME, npm cache, proxy, XDG, and temporary-directory configuration while defaulting Wrangler and Miniflare state to the checkout. If npm reports an unwritable cache, select a writable path with `npm_config_cache` for that install. The `dev` and `start` scripts also keep Wrangler logs inside the checkout. Generated `.sites-runtime/` and `.wrangler/` directories are disposable and ignored by Git.
-
-On portable, `npm run dev` uses `vinext dev` with HMR, starting at port 5173. Vinext records the running server in ignored `.vinext/` state, rejects an ordinary duplicate launch, and recovers stale state after a stopped process; exactly simultaneous starts can race. Pass `--port <port>` or `--hostname <host>` after `npm run dev --` when needed; keep portable previews on loopback.
-
-For browser QA on managed Linux, use `sites-preview start`. The project's dev script runs Vite and accepts the supervisor's `--host 0.0.0.0 --port 4173 --strictPort` arguments. The internal browser uses `http://terminal.local:4173/`; it is not a user-facing URL. The supervisor owns the preview lifecycle. The ignored local profile survives the supervisor's cleared process environment.
-
-Local previews use the same app-owned account flow as production. Apply the pending D1 migrations before testing registration or sign-in locally.
-
-The Worker uses `vinext/server/fetch-handler`, including Vinext's config-aware image handling. After building, `npm start` runs that Worker locally through Wrangler on `127.0.0.1`, sharing `.wrangler/state` with dev preview and local D1 migrations; it does not deploy the site or simulate sign-in. Use the URL printed by the server. Pass `npm start -- --port <port>` to select a different built-preview port.
-
-Local previews use Miniflare's placeholder `Request.cf` metadata without a network lookup. Set `CLOUDFLARE_CF_FETCH_ENABLED=true` to opt into fetching preview metadata; this setting does not change hosted request metadata.
-
-Local tool usage metrics are disabled by default. Set `WRANGLER_SEND_METRICS=true` to opt in.
-
-## Included Shape
-
-- edit site code under `app/`
-- `app/auth.ts` implements password hashing, opaque sessions, and secure cookies
-- `app/api/auth/` exposes registration, sign-in, and sign-out endpoints
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/index.ts` reads the D1 binding from the Cloudflare Worker environment
-- `db/schema.ts` defines accounts, sessions, and Forain's journal data
-- `@cloudflare/workers-types` provides Worker types; `cloudflare-env.d.ts` declares optional `DB`/`BUCKET` bindings—update these declarations if binding names change
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## App-owned authentication
-
-Registration accepts a display name, login ID, and password. Login IDs are normalized to lowercase and are unique. Passwords are stored only as PBKDF2-SHA256 hashes with per-user salts; browser sessions use random opaque tokens, while the database stores only each token's SHA-256 hash.
-
-The `forain_session` cookie is HTTP-only, SameSite=Lax, and secure in production. All user-owned API routes resolve the current account from this server-side session. The hosted Site itself should remain publicly reachable so visitors can see the Forain login screen; application data is still protected by the session checks.
-
-## Local D1 migrations
-
-For a D1-backed local preview, generate SQL with `npm run db:generate`. Build once through the Sites skill's build entrypoint (or `npm run build` for standalone use) to generate `dist/server/wrangler.json`, rebuilding if bindings change. From the project root, apply each pending migration in order:
+## 로컬 설정
 
 ```sh
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_example.sql
+npm install
+cp .env.example .env   # 아래 "환경변수" 참고해 값 채우기
+npm run db:migrate      # Turso DB에 마이그레이션 적용
+npm run dev
 ```
 
-Replace the filename with the pending migration and `DB` with your D1 binding name if different. Use `.wrangler/state`, not `.wrangler/state/v3`; Wrangler adds the versioned directories. Do not replay migrations already applied locally. This updates only the preview database; publishing applies production migrations separately.
+터미널에 표시되는 `http://localhost:3000`으로 접속합니다.
 
-## Diagnostic Commands
+### 환경변수
 
-- `npm run install:ci`: perform the one locked dependency install
-- `npm run dev`: start the Vite/Vinext development server
-- `npm run build`: build the deployable Sites artifact
-- `npm run start`: preview the built Worker locally with D1/R2 support
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+`.env.example`을 참고합니다.
 
-When using the Sites plugin, follow its skill instructions for installation, builds, and publishing. These npm commands remain available for standalone use.
+| 변수 | 설명 |
+| --- | --- |
+| `TURSO_DATABASE_URL` | Turso 데이터베이스 URL (`libsql://...`) |
+| `TURSO_AUTH_TOKEN` | Turso 인증 토큰 |
+| `AI_MOCK_MODE` | `true`면 네트워크 없이 규칙 기반 분석기를 사용합니다 |
+| `OPENAI_API_KEY` | 실제 OpenAI 분석을 사용할 때 서버 환경에만 설정합니다 |
+| `OPENAI_ACTIVITY_MODEL` | 기본 분석 모델 |
+| `OPENAI_FALLBACK_MODEL` | 향후 재시도 정책을 위한 예약 변수(현재 코드에서는 사용하지 않음) |
 
-The portable build runs Vinext directly without a host `timeout` command. The managed-linux build uses `scripts/build-verified.sh` and its existing `SITES_BUILD_TIMEOUT` setting.
+비밀키를 클라이언트 코드나 Git에 저장하지 마세요 (`.env*`는 gitignore 처리되어 있습니다).
+
+## 데이터베이스 마이그레이션
+
+스키마는 `db/schema.ts`에 있습니다. 스키마를 변경한 뒤:
+
+```sh
+npm run db:generate   # drizzle/ 아래 새 마이그레이션 파일 생성
+npm run db:migrate     # .env의 Turso DB에 적용
+```
+
+기존에 적용된 마이그레이션 파일은 수정하지 말고 새 파일만 추가하세요. `drizzle-kit generate`가 만드는 SQL 파일에는 문(statement) 사이에 `--> statement-breakpoint` 구분자가 있어야 합니다 — 이 구분자가 없으면 Turso의 HTTP 프로토콜이 "한 번에 여러 SQL문을 보냄" 에러로 마이그레이션 적용을 거부합니다. 파일을 손으로 편집했다면 이 구분자가 잘 들어있는지 확인하세요.
+
+## 명령어
+
+- `npm run dev` — 개발 서버 (`next dev`)
+- `npm run build` — 프로덕션 빌드 (`next build`)
+- `npm run start` — 빌드된 앱 로컬 실행 (`next start`)
+- `npm run lint` — ESLint
+- `npm run db:generate` — 스키마 변경 후 마이그레이션 파일 생성
+- `npm run db:migrate` — Turso DB에 마이그레이션 적용
+
+## 배포 (Vercel)
+
+GitHub 저장소를 Vercel 프로젝트에 연결하면 `main` 브랜치 push마다 자동 배포됩니다. Vercel 프로젝트 환경변수에 위 표의 값들을 동일하게 등록해야 합니다 (Production/Preview 모두).
+
+## 인증
+
+회원가입은 표시 이름, 로그인 아이디, 비밀번호를 받습니다. 로그인 아이디는 소문자로 정규화되어 고유해야 합니다. 비밀번호는 PBKDF2-SHA256 해시(사용자별 salt)로만 저장되며, 세션은 랜덤 opaque 토큰을 발급하고 데이터베이스에는 토큰의 SHA-256 해시만 저장합니다. `forain_session` 쿠키는 HttpOnly, SameSite=Lax이며 프로덕션에서는 Secure입니다.
+
+같은 계정에 비밀번호를 5회 연속 틀리면 15분간 로그인이 잠깁니다(계정 단위 잠금). 잠금 시간이 지나면 다음 로그인 시도 때 자동으로 해제됩니다.
+
+## 주요 파일
+
+- `app/forain-app.tsx` — 대시보드, 편린 작성/조회, 활동 분석 결과, 결숲 시각화(SVG), 설정 UI
+- `app/auth.ts` — 비밀번호 해싱, 세션 발급/검증, 로그인 시도 제한
+- `app/auth-screen.tsx` — 로그인/회원가입 화면
+- `app/api/` — 일기, 활동 분석, 확정, 인증 API 라우트
+- `lib/database.ts` — Turso(libSQL)를 D1과 동일한 인터페이스(`prepare/bind/first/all/run/batch`)로 감싸는 어댑터
+- `lib/forain-server.ts` — Mock/실제 AI 분석, 일일 생장 재계산
+- `db/schema.ts` — Turso 데이터 모델 (Drizzle)
+- `public/forain-logo.png` — 브랜드 로고
 
 ## Learn More
 
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+- [Turso Documentation](https://docs.turso.tech)
+- [Drizzle ORM Documentation](https://orm.drizzle.team)
+- [Next.js Documentation](https://nextjs.org/docs)
