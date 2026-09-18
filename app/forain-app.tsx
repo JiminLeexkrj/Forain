@@ -110,7 +110,7 @@ function fractalSegments(angle: number, score: number, split: number, seedKey: s
       grow(endX, endY, upDirection, nextLength * (.7 + rand() * .35), depth + 1);
     }
   };
-  const trunkLength = (104 + level * 25 + Math.min(score, 12) * 3) * (.85 + rand() * .3);
+  const trunkLength = (65 + level * 18 + Math.min(score, 12) * 3) * (.5 + rand() * .75);
   grow(startX, startY, angle, trunkLength, 0);
   return { segments, level, startX, startY };
 }
@@ -330,7 +330,6 @@ function FractalCanopy({ growth, selected, onSelect }: { growth: Record<string, 
           <path className="fractal-segment" d={segment.d} stroke={color} strokeWidth={Math.max(.9, thickness * (1 - segment.depth * .2))} filter={score > 3 ? `url(#glow-${category.toLowerCase()})` : undefined} />
           {segment.depth === branch.level && score > 0 && <Foliage x={segment.x} y={segment.y} angle={segment.angle} jitter={segment.jitter} score={score} color={color} />}
         </g>)}
-        <Fireflies segments={branch.segments} score={score} />
       </g>;
     })}
     <g className="nucleus-tangle" aria-hidden="true">
@@ -368,33 +367,6 @@ function Foliage({ x, y, angle, jitter, score, color }: { x: number; y: number; 
       const cx = x + Math.cos(rad) * size * 1.05;
       const cy = y + Math.sin(rad) * size * 1.05;
       return <ellipse key={index} className="fractal-bud" cx={cx} cy={cy} rx={size * 1.9} ry={size * .95} fill={color} transform={`rotate(${leafAngle.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})`} />;
-    })}
-  </g>;
-}
-
-function Fireflies({ segments, score }: { segments: FractalSegment[]; score: number }) {
-  const count = Math.min(6, Math.floor(score / 3));
-  if (count <= 0 || !segments.length) return null;
-  return <g className="fractal-fireflies" aria-hidden="true">
-    {Array.from({ length: count }, (_, index) => {
-      const segment = segments[Math.floor(((index + .5) / count) * segments.length) % segments.length];
-      const radius = 6 + segment.jitter * 8;
-      const duration = (4.8 + segment.jitter * 4.2).toFixed(2);
-      const delay = (segment.jitter * Number(duration)).toFixed(2);
-      const twinkleDelay = (segment.jitter * 2.4).toFixed(2);
-      const style = {
-        "--fx-cx": `${segment.x.toFixed(1)}px`,
-        "--fx-cy": `${segment.y.toFixed(1)}px`,
-        "--fx-r": `${radius.toFixed(1)}px`,
-        "--fx-duration": `${duration}s`,
-        "--fx-delay": `${delay}s`,
-        "--fx-direction": index % 2 ? "reverse" : "normal",
-        "--fx-twinkle-delay": `${twinkleDelay}s`,
-      } as React.CSSProperties;
-      return <g key={index} className="firefly" style={style}>
-        <circle className="firefly-halo" cx={segment.x} cy={segment.y} r={7 + segment.jitter * 4} />
-        <circle className="firefly-core" cx={segment.x} cy={segment.y} r={3 + segment.jitter * 1.8} />
-      </g>;
     })}
   </g>;
 }

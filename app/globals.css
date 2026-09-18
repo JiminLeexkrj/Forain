@@ -175,18 +175,6 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .nucleus-tangle path:nth-child(3n + 1) { stroke: #9a6840; stroke-width: 5; }
 .nucleus-tangle path:nth-child(3n + 2) { stroke: #503522; stroke-width: 8; opacity: .78; }
 @keyframes bud-pulse { 50% { opacity: 1; } }
-.fractal-fireflies { pointer-events: none; }
-.firefly-halo, .firefly-core { animation-name: firefly-wander; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-duration: var(--fx-duration, 6s); animation-delay: var(--fx-delay, 0s); animation-direction: var(--fx-direction, normal); }
-.firefly-halo { fill: #ffe9a8; opacity: .45; filter: blur(4px); }
-.firefly-core { fill: #fffceb; opacity: .95; filter: drop-shadow(0 0 4px #fff8d8) drop-shadow(0 0 9px #ffdf8a); animation-name: firefly-wander, firefly-twinkle; animation-duration: var(--fx-duration, 6s), 2.1s; animation-delay: var(--fx-delay, 0s), var(--fx-twinkle-delay, 0s); animation-direction: var(--fx-direction, normal), normal; animation-timing-function: ease-in-out, ease-in-out; animation-iteration-count: infinite, infinite; }
-@keyframes firefly-wander {
-  0% { cx: calc(var(--fx-cx) - var(--fx-r)); cy: var(--fx-cy); }
-  25% { cx: var(--fx-cx); cy: calc(var(--fx-cy) - var(--fx-r) * 1.25); }
-  50% { cx: calc(var(--fx-cx) + var(--fx-r)); cy: var(--fx-cy); }
-  75% { cx: var(--fx-cx); cy: calc(var(--fx-cy) + var(--fx-r) * 1.25); }
-  100% { cx: calc(var(--fx-cx) - var(--fx-r)); cy: var(--fx-cy); }
-}
-@keyframes firefly-twinkle { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 .veins path { stroke: rgba(187, 220, 139, .28); stroke-width: .42; stroke-dasharray: 1.2 1; filter: drop-shadow(0 0 4px rgba(190, 234, 138, .25)); }
 .forest-core { position: absolute; z-index: 8; left: 50%; top: 53%; width: clamp(210px, 23vw, 330px); aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; }
 .forest-core img { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 26px 32px rgba(0,0,0,.65)) drop-shadow(0 0 24px rgba(193, 231, 126, .15)); animation: core-breathe 6s ease-in-out infinite; }
