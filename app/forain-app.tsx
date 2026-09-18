@@ -240,7 +240,7 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
     <main className={`app-shell ${uiHidden ? "ui-hidden" : ""}`}>
       {!uiHidden && (
         <aside className={`side-panel glass ${menuOpen ? "open" : "closed"}`}>
-          <div className="brand-row"><div className="brand-seed">F</div>{menuOpen && <strong>Forain</strong>}</div>
+          <div className="brand-row"><img src="/forain-logo.png" alt="Forain" className="brand-seed" />{menuOpen && <strong>Forain</strong>}</div>
           <nav aria-label="주요 메뉴">
             <button className="active" title="결숲"><Sprout />{menuOpen && <span>결숲</span>}</button>
             <button onClick={() => setOverlay("diaries")} title="편린"><BookOpen />{menuOpen && <span>편린</span>}</button>
