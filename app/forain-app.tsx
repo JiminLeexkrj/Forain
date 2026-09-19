@@ -19,11 +19,11 @@ import {
   AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-type Overlay = "diaries" | "editor" | "analysis" | "settings" | null;
+type Overlay = "diaries" | "editor" | "analysis" | "settings" | "tutorial" | null;
 type Diary = { id: string; body: string; status: string; localDate: string; createdAt: string };
 type Mention = { id: string; diaryId: string; name: string; normalizedName?: string | null; category: string; confidence: number; evidence: string; status: string; growth: number; createdAt: string };
 type Growth = { category: string; appliedGrowth: number };
-type AppState = { diaries: Diary[]; mentions: Mention[]; growth: Growth[]; todayGrowth: number };
+type AppState = { diaries: Diary[]; mentions: Mention[]; growth: Growth[]; todayGrowth: number; tutorialSeen: boolean };
 
 const categoryLabels: Record<string, string> = {
   LEARNING: "배움", WORK: "일", CREATIVE: "창작", MUSIC: "음악",
@@ -135,7 +135,7 @@ function localDate() {
 
 export function ForainApp({ user }: { user: { name: string; loginId: string } }) {
   const [overlay, setOverlay] = useState<Overlay>(null);
-  const [state, setState] = useState<AppState>({ diaries: [], mentions: [], growth: [], todayGrowth: 0 });
+  const [state, setState] = useState<AppState>({ diaries: [], mentions: [], growth: [], todayGrowth: 0, tutorialSeen: true });
   const [body, setBody] = useState("");
   const [activeDiary, setActiveDiary] = useState<Diary | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -159,6 +159,18 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
   }, []);
 
   useEffect(() => { void loadState(); }, [loadState]);
+
+  const markTutorialSeen = useCallback(() => {
+    setState((current) => (current.tutorialSeen ? current : { ...current, tutorialSeen: true }));
+    void fetch("/api/preferences", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tutorialSeen: true }) });
+  }, []);
+
+  const tutorialAutoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (state.tutorialSeen || tutorialAutoOpenedRef.current) return;
+    tutorialAutoOpenedRef.current = true;
+    setOverlay((current) => current ?? "tutorial");
+  }, [state.tutorialSeen]);
 
   // Opening a dialog/sheet doesn't normally touch browser history, so on mobile the
   // hardware/gesture back button has nothing app-related to undo and just leaves the
@@ -339,12 +351,13 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
           </section>
       </section>
 
-      <Dialog open={Boolean(overlay)} onOpenChange={(open) => { if (!open && !busy) setOverlay(null); }}>
-        <DialogContent className={`forest-overlay ${overlay === "editor" ? "writing-overlay" : ""} ${overlay === "analysis" ? "analysis-overlay" : ""}`}>
+      <Dialog open={Boolean(overlay)} onOpenChange={(open) => { if (!open && !busy) { if (overlay === "tutorial") markTutorialSeen(); setOverlay(null); } }}>
+        <DialogContent className={`forest-overlay ${overlay === "editor" ? "writing-overlay" : ""} ${overlay === "analysis" ? "analysis-overlay" : ""} ${overlay === "tutorial" ? "tutorial-overlay" : ""}`}>
           {overlay === "editor" && <Editor body={body} setBody={setBody} busy={busy} onAnalyze={saveAndAnalyze} />}
           {overlay === "analysis" && <Analysis diary={activeDiary} mentions={mentionsForDiary} busy={busy} onConfirm={confirmAnalysis} onUpdate={updateMention} onDelete={removeMention} />}
           {overlay === "diaries" && <DiaryList diaries={state.diaries} onDelete={removeDiary} onNew={startNew} onReview={(diary) => { setActiveDiary(diary); setOverlay("analysis"); }} />}
-          {overlay === "settings" && <SettingsView user={user} />}
+          {overlay === "settings" && <SettingsView user={user} onReplayTutorial={() => setOverlay("tutorial")} />}
+          {overlay === "tutorial" && <Tutorial onFinish={() => { markTutorialSeen(); setOverlay(null); }} />}
         </DialogContent>
       </Dialog>
 
@@ -515,7 +528,34 @@ function Analysis({ diary, mentions, busy, onConfirm, onUpdate, onDelete }: { di
   return <div className="overlay-page"><DialogHeader><p className="eyebrow">활동 채집 결과</p><DialogTitle>편린에서 발견한 활동</DialogTitle><DialogDescription>편린 원문은 보존되며, 결숲에 반영할 활동만 확인할 수 있어요.</DialogDescription></DialogHeader><section className="analysis-layout"><article className="paper-card source"><span className="section-label">남긴 편린</span><p>{diary?.body}</p></article><div className="mention-list">{busy ? <div className="analyzing"><LoaderCircle className="spin" /><h2>편린을 천천히 살펴보고 있어요</h2><p>실제로 한 활동만 골라내고 있습니다.</p></div> : mentions.length ? mentions.map((mention) => <article key={mention.id} className="mention-card"><div className="category-dot" style={{ background: categoryColors[mention.category] }} /><div><select aria-label={`${mention.name} 카테고리`} value={mention.category} onChange={(event) => void onUpdate(mention.id, { category: event.target.value })}>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><input aria-label="활동 이름" value={mention.name} onChange={(event) => void onUpdate(mention.id, { name: event.target.value })} /><p>“{mention.evidence}”</p></div><div className="mention-actions"><b>{Math.round(mention.confidence * 100)}%</b><Button variant="ghost" size="icon" onClick={() => void onDelete(mention.id)} aria-label={`${mention.name} 삭제`}><Trash2 /></Button></div></article>) : <div className="analyzing"><Leaf /><h2>확정할 활동을 찾지 못했어요</h2><p>오늘 직접 한 일을 적었는지 확인해 보세요.</p></div>}</div></section><footer className="analysis-actions"><Button onClick={onConfirm} disabled={busy || !mentions.length}>{busy ? <LoaderCircle className="spin" /> : <Sprout />}결숲에 반영</Button></footer></div>;
 }
 
-function SettingsView({ user }: { user: { name: string; loginId: string } }) {
+const tutorialSteps = [
+  { icon: Sprout, title: "기록이 자라는 곳, Forain", body: "오늘 남긴 편린만큼 나만의 결숲이 자랍니다. 열두 개의 줄기가 서로 다른 삶의 영역을 나타내요." },
+  { icon: BookOpen, title: "편린을 남겨보세요", body: "오늘 있었던 일을 편하게 적어주세요. 저장한 뒤에는 수정할 수 없지만, 원문은 그대로 보존돼요." },
+  { icon: Sparkles, title: "AI가 활동을 찾아드려요", body: "적어주신 글에서 실제로 한 활동만 골라 카테고리와 이름을 제안해요. 결숲에 반영하기 전에 자유롭게 고치거나 지울 수 있어요." },
+  { icon: Leaf, title: "결숲에서 확인하세요", body: "확정한 활동만큼 해당 카테고리 줄기가 자라요. 줄기를 클릭하면 어떤 활동들이 반영됐는지 볼 수 있어요." },
+  { icon: CirclePlus, title: "이제 시작해볼까요?", body: "오늘의 편린을 남기면서 결숲을 가꿔보세요. 이 안내는 설정에서 언제든 다시 볼 수 있어요." },
+];
+
+function Tutorial({ onFinish }: { onFinish: () => void }) {
+  const [step, setStep] = useState(0);
+  const current = tutorialSteps[step];
+  const Icon = current.icon;
+  const isLast = step === tutorialSteps.length - 1;
+  return <div className="overlay-page tutorial-page">
+    <DialogHeader><p className="eyebrow">시작 안내 · {step + 1}/{tutorialSteps.length}</p><DialogTitle>{current.title}</DialogTitle><DialogDescription>{current.body}</DialogDescription></DialogHeader>
+    <div className="tutorial-icon"><Icon /></div>
+    <div className="tutorial-dots" aria-hidden="true">{tutorialSteps.map((_, index) => <span key={index} className={index === step ? "active" : ""} />)}</div>
+    <footer className="tutorial-actions">
+      <button type="button" className="tutorial-skip" onClick={onFinish}>건너뛰기</button>
+      <div className="tutorial-nav">
+        {step > 0 && <Button variant="outline" onClick={() => setStep((value) => value - 1)}>이전</Button>}
+        <Button onClick={() => (isLast ? onFinish() : setStep((value) => value + 1))}>{isLast ? "시작하기" : "다음"}</Button>
+      </div>
+    </footer>
+  </div>;
+}
+
+function SettingsView({ user, onReplayTutorial }: { user: { name: string; loginId: string }; onReplayTutorial: () => void }) {
   async function signOut() { await fetch("/api/auth/logout", { method: "POST" }); window.location.href = "/"; }
-  return <div className="overlay-page settings-overlay-page"><DialogHeader><p className="eyebrow">설정</p><DialogTitle>나의 Forain</DialogTitle><DialogDescription>결숲을 떠나지 않고 계정 정보를 확인합니다.</DialogDescription></DialogHeader><section className="settings-card"><div><span>계정</span><h2>{user.name}</h2><p>@{user.loginId}</p></div><Button variant="outline" onClick={() => void signOut()}>로그아웃</Button></section><section className="settings-card"><div><span>현지 시간대</span><h2>{Intl.DateTimeFormat().resolvedOptions().timeZone}</h2><p>날짜는 현지 시간대를 기준으로 기록됩니다.</p></div></section><section className="settings-card danger"><div><span>계정 삭제</span><h2>모든 기록과 결숲 삭제</h2><p>MVP에서는 문의 후 처리됩니다.</p></div></section></div>;
+  return <div className="overlay-page settings-overlay-page"><DialogHeader><p className="eyebrow">설정</p><DialogTitle>나의 Forain</DialogTitle><DialogDescription>결숲을 떠나지 않고 계정 정보를 확인합니다.</DialogDescription></DialogHeader><section className="settings-card"><div><span>계정</span><h2>{user.name}</h2><p>@{user.loginId}</p></div><Button variant="outline" onClick={() => void signOut()}>로그아웃</Button></section><section className="settings-card"><div><span>현지 시간대</span><h2>{Intl.DateTimeFormat().resolvedOptions().timeZone}</h2><p>날짜는 현지 시간대를 기준으로 기록됩니다.</p></div></section><section className="settings-card"><div><span>도움말</span><h2>사용법 튜토리얼</h2><p>결숲이 자라는 흐름을 다시 안내해드려요.</p></div><Button variant="outline" onClick={onReplayTutorial}>다시 보기</Button></section><section className="settings-card danger"><div><span>계정 삭제</span><h2>모든 기록과 결숲 삭제</h2><p>MVP에서는 문의 후 처리됩니다.</p></div></section></div>;
 }

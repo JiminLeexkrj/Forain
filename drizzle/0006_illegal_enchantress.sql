@@ -1,0 +1,1 @@
+ALTER TABLE `user_preferences` ADD `has_seen_tutorial` integer DEFAULT true NOT NULL;

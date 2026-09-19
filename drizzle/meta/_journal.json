@@ -43,6 +43,13 @@
       "when": 1789778925631,
       "tag": "0005_hesitant_red_shift",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789780508372,
+      "tag": "0006_illegal_enchantress",
+      "breakpoints": true
     }
   ]
 }

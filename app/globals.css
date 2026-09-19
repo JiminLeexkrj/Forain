@@ -222,6 +222,22 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .analysis-overlay { max-width: 1080px !important; }
 .overlay-page, .popup-editor { min-width: 0; }.overlay-page [data-slot="dialog-title"], .popup-editor [data-slot="dialog-title"] { font: 500 clamp(29px, 4vw, 42px)/1.12 Georgia, "Noto Serif KR", serif; letter-spacing: -.03em; }
 .overlay-page [data-slot="dialog-description"], .popup-editor [data-slot="dialog-description"] { color: #99a89e; font-size: 14px; line-height: 1.65; }
+.tutorial-overlay { max-width: 460px !important; }
+.tutorial-page { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.tutorial-page [data-slot="dialog-header"] { text-align: center; align-items: center; }
+.tutorial-page [data-slot="dialog-title"] { font-size: clamp(23px, 3.2vw, 30px) !important; }
+.tutorial-icon { width: 72px; height: 72px; display: grid; place-items: center; border-radius: 50%; background: rgba(196, 221, 129, .12); color: #c4dd81; margin: 20px 0; }
+.tutorial-icon svg { width: 32px; height: 32px; }
+.tutorial-dots { display: flex; gap: 6px; margin: 4px 0 24px; }
+.tutorial-dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(232, 238, 232, .22); transition: .2s ease; }
+.tutorial-dots span.active { background: #c4dd81; width: 20px; border-radius: 5px; }
+.tutorial-actions { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+.tutorial-skip { background: none; border: none; color: #7c8a80; font-size: 13px; cursor: pointer; padding: 8px; }
+.tutorial-skip:hover { color: #e8eee8; }
+.tutorial-nav { display: flex; gap: 10px; }
+.tutorial-nav button { min-height: 42px; padding: 0 20px; border-radius: 12px; }
+.tutorial-nav button:last-child { background: #c4dd81; color: #193023; font-weight: 700; }
+.tutorial-nav button:last-child:hover:not(:disabled) { background: #d0e996; }
 .overlay-primary-action { position: absolute; top: 34px; right: 72px; }
 .popup-editor .paper-editor { min-height: min(64vh, 590px); margin: 0; padding: clamp(26px, 5vw, 56px); border-radius: 5px 24px 24px 5px; background-color: #1d150e; }
 .popup-editor .paper-editor textarea { min-height: 340px; padding-top: 4px; font-size: 18px; }

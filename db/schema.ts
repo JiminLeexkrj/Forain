@@ -74,6 +74,7 @@ export const userPreferences = sqliteTable("user_preferences", {
   userId: text("user_id").primaryKey(),
   timezone: text("timezone").notNull().default("Asia/Seoul"),
   forestSeed: integer("forest_seed").notNull(),
+  hasSeenTutorial: integer("has_seen_tutorial", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });

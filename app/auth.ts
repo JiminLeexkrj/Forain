@@ -50,8 +50,8 @@ export async function registerUser(input: RegistrationInput): Promise<AppUser> {
     await db.batch([
       db.prepare("INSERT INTO users (id, login_id, display_name, password_hash, password_salt, password_iterations, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(id, loginId, input.displayName.trim(), encodeBytes(passwordHash), encodeBytes(salt), PASSWORD_ITERATIONS, timestamp, timestamp),
-      db.prepare("INSERT INTO user_preferences (user_id, timezone, forest_seed, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
-        .bind(id, "Asia/Seoul", randomForestSeed(), timestamp, timestamp),
+      db.prepare("INSERT INTO user_preferences (user_id, timezone, forest_seed, has_seen_tutorial, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)")
+        .bind(id, "Asia/Seoul", randomForestSeed(), 0, timestamp, timestamp),
     ]);
   } catch (cause) {
     if (cause instanceof Error && /unique/i.test(cause.message)) throw new Error("LOGIN_ID_TAKEN");
