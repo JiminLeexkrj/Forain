@@ -7,6 +7,13 @@ export const metadata: Metadata = {
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };
 
+const themeInitScript = `
+try {
+  var theme = window.localStorage.getItem("forain-theme");
+  if (theme === "light") document.documentElement.setAttribute("data-theme", "light");
+} catch (e) {}
+`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="ko"><body>{children}</body></html>;
+  return <html lang="ko" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{ __html: themeInitScript }} /></head><body>{children}</body></html>;
 }

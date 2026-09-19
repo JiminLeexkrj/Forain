@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen, ChevronLeft, CirclePlus, Eye, EyeOff, Leaf,
-  LoaderCircle, LocateFixed, Menu, Minus, Plus, Settings, Sparkles,
-  Sprout, Trash2, X,
+  LoaderCircle, LocateFixed, Menu, Minus, Moon, Plus, Settings, Sparkles,
+  Sprout, Sun, Trash2, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/app/use-theme";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -142,6 +143,7 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(true);
+  const { theme, toggleTheme } = useTheme();
   const [uiHidden, setUiHidden] = useState(false);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -321,6 +323,7 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
             <button className="active" title="결숲"><Sprout />{menuOpen && <span>결숲</span>}</button>
             <button onClick={() => setOverlay("diaries")} title="편린"><BookOpen />{menuOpen && <span>편린</span>}</button>
             <button onClick={() => setOverlay("settings")} title="설정"><Settings />{menuOpen && <span>설정</span>}</button>
+            <button onClick={toggleTheme} title={theme === "light" ? "다크 모드로 전환" : "라이트 모드로 전환"}>{theme === "light" ? <Sun /> : <Moon />}{menuOpen && <span>{theme === "light" ? "라이트 모드" : "다크 모드"}</span>}</button>
           </nav>
           <button className="new-fragment" onClick={startNew}><CirclePlus />{menuOpen && <span>새 편린</span>}</button>
           <button className="collapse" onClick={() => setMenuOpen((value) => !value)}>{menuOpen ? <ChevronLeft /> : <Menu />}{menuOpen && <span>메뉴 접기</span>}</button>

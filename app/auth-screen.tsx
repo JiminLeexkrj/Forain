@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ThemeToggle } from "@/app/theme-toggle";
 
 export function AuthScreen() {
   const [busy, setBusy] = useState(false);
@@ -38,7 +39,7 @@ export function AuthScreen() {
     }
   }
 
-  return <main className="auth-shell"><section className="auth-card" aria-labelledby="auth-title">
+  return <main className="auth-shell"><ThemeToggle className="theme-toggle-floating" /><section className="auth-card" aria-labelledby="auth-title">
     <header className="auth-brand"><img src="/forain-logo.png" alt="Forain" className="welcome-mark" /><p className="eyebrow">기록이 자라는 곳</p><h1 id="auth-title">Forain</h1><p>오늘의 편린을 남기면 나만의 결숲이 자랍니다.</p></header>
     <Tabs defaultValue="login" onValueChange={() => setError("")}>
       <TabsList className="auth-tabs"><TabsTrigger value="login">로그인</TabsTrigger><TabsTrigger value="register">회원가입</TabsTrigger></TabsList>
