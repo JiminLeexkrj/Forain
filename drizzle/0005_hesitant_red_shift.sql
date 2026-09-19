@@ -1,0 +1,1 @@
+ALTER TABLE `activity_mentions` ADD `normalized_name` text;

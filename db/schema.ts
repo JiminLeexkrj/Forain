@@ -37,6 +37,7 @@ export const activityMentions = sqliteTable("activity_mentions", {
   diaryId: text("diary_id").notNull().references(() => diaries.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull(),
   name: text("name").notNull(),
+  normalizedName: text("normalized_name"),
   category: text("category").notNull(),
   confidence: real("confidence").notNull(),
   evidence: text("evidence").notNull(),

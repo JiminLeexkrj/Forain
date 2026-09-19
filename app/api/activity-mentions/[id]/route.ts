@@ -11,8 +11,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const db = database();
     const mention = await db.prepare("SELECT name, category FROM activity_mentions WHERE id = ? AND user_id = ?").bind(id, user.userId).first<{ name: string; category: string }>();
     if (!mention) return Response.json({ error: "활동을 찾을 수 없습니다." }, { status: 404 });
+    const nextName = payload.name?.trim() || mention.name;
     await db.batch([
-      db.prepare("UPDATE activity_mentions SET name = ?, category = ? WHERE id = ? AND user_id = ?").bind(payload.name?.trim() || mention.name, payload.category || mention.category, id, user.userId),
+      db.prepare("UPDATE activity_mentions SET name = ?, normalized_name = ?, category = ? WHERE id = ? AND user_id = ?").bind(nextName, nextName, payload.category || mention.category, id, user.userId),
       db.prepare("UPDATE activity_growth_events SET category = ? WHERE activity_mention_id = ? AND user_id = ?").bind(payload.category || mention.category, id, user.userId),
     ]);
     const dates = await db.prepare("SELECT DISTINCT local_date AS localDate FROM activity_growth_events WHERE activity_mention_id = ? AND user_id = ?").bind(id, user.userId).all<{ localDate: string }>();

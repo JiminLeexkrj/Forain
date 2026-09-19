@@ -21,7 +21,7 @@ import {
 
 type Overlay = "diaries" | "editor" | "analysis" | "settings" | null;
 type Diary = { id: string; body: string; status: string; localDate: string; createdAt: string };
-type Mention = { id: string; diaryId: string; name: string; category: string; confidence: number; evidence: string; status: string; growth: number; createdAt: string };
+type Mention = { id: string; diaryId: string; name: string; normalizedName?: string | null; category: string; confidence: number; evidence: string; status: string; growth: number; createdAt: string };
 type Growth = { category: string; appliedGrowth: number };
 type AppState = { diaries: Diary[]; mentions: Mention[]; growth: Growth[]; todayGrowth: number };
 
@@ -81,6 +81,13 @@ function angleDiff(from: number, to: number) {
 // so very high scores never look identical, without piling on density either.
 function extendedGrowth(score: number, cap: number) {
   return score <= cap ? score : cap + Math.sqrt(score - cap);
+}
+
+function normalizeActivityLabel(name: string) {
+  const trimmed = name.trim();
+  const withCompanion = trimmed.match(/^.+?(?:와|과|랑|하고)\s+(.+)$/);
+  const core = (withCompanion ? withCompanion[1] : trimmed).replace(/^함께\s+/, "").trim();
+  return core || trimmed;
 }
 
 function fractalSegments(angle: number, score: number, split: number, seedKey: string) {
@@ -221,6 +228,21 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
 
   const totalGrowth = useMemo(() => Object.values(categoryGrowth).reduce((sum, value) => sum + value, 0), [categoryGrowth]);
 
+  const categoryBreakdown = useMemo(() => {
+    const byCategory = new Map<string, Map<string, number>>();
+    for (const mention of state.mentions) {
+      if (mention.status !== "confirmed" || mention.growth <= 0) continue;
+      const byName = byCategory.get(mention.category) || new Map<string, number>();
+      const label = normalizeActivityLabel(mention.normalizedName || mention.name);
+      byName.set(label, (byName.get(label) || 0) + mention.growth);
+      byCategory.set(mention.category, byName);
+    }
+    return Object.fromEntries(Array.from(byCategory.entries()).map(([category, byName]) => [
+      category,
+      Array.from(byName.entries()).sort((a, b) => b[1] - a[1]),
+    ])) as Record<string, [string, number][]>;
+  }, [state.mentions]);
+
   async function saveAndAnalyze() {
     if (!body.trim()) { setError("편린 내용을 입력해 주세요."); return; }
     setBusy(true); setError("");
@@ -300,7 +322,7 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
               className="forest-canvas"
               style={{ "--forest-mist": Math.min(1, Math.log2(totalGrowth + 1) * .15).toFixed(3) } as React.CSSProperties}
               onWheel={(event) => { event.preventDefault(); changeScale(event.deltaY > 0 ? -.1 : .1); }}
-              onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); setDrag({ x: event.clientX - offset.x, y: event.clientY - offset.y }); }}
+              onPointerDown={(event) => { if ((event.target as Element).closest(".fractal-branch")) return; event.currentTarget.setPointerCapture(event.pointerId); setDrag({ x: event.clientX - offset.x, y: event.clientY - offset.y }); }}
               onPointerMove={(event) => drag && setOffset({ x: event.clientX - drag.x, y: event.clientY - drag.y })}
               onPointerUp={() => setDrag(null)}
             >
@@ -329,7 +351,14 @@ export function ForainApp({ user }: { user: { name: string; loginId: string } })
       <Sheet open={Boolean(selectedCategory)} onOpenChange={(open) => !open && setSelectedCategory(null)}>
         <SheetContent className="activity-sheet">
           <SheetHeader><SheetTitle>{selectedCategory ? categoryLabels[selectedCategory] : ""}</SheetTitle><SheetDescription>이 줄기는 해당 카테고리의 누적 활동으로 자랍니다.</SheetDescription></SheetHeader>
-          {selectedCategory && <div className="category-detail"><div className="detail-orbit" style={{ "--category-color": categoryColors[selectedCategory] } as React.CSSProperties}><span /><i /><b /></div><dl><div><dt>누적 생장도</dt><dd>{categoryGrowth[selectedCategory].toFixed(1)}</dd></div><div><dt>고유 패턴</dt><dd>{categoryPatterns[selectedCategory].rhythm}</dd></div><div><dt>현재 단계</dt><dd>{fractalSegments(0, categoryGrowth[selectedCategory], categoryPatterns[selectedCategory].split, selectedCategory).level + 1}단계</dd></div></dl></div>}
+          {selectedCategory && <div className="category-detail"><div className="detail-orbit" style={{ "--category-color": categoryColors[selectedCategory] } as React.CSSProperties}><span /><i /><b /></div><dl><div><dt>누적 생장도</dt><dd>{categoryGrowth[selectedCategory].toFixed(1)}</dd></div><div><dt>고유 패턴</dt><dd>{categoryPatterns[selectedCategory].rhythm}</dd></div><div><dt>현재 단계</dt><dd>{fractalSegments(0, categoryGrowth[selectedCategory], categoryPatterns[selectedCategory].split, selectedCategory).level + 1}단계</dd></div></dl>
+            <div className="detail-breakdown">
+              <span className="section-label">세부 활동</span>
+              {categoryBreakdown[selectedCategory]?.length
+                ? <ul>{categoryBreakdown[selectedCategory].map(([name, value]) => <li key={name}><span>{name}</span><b style={{ color: categoryColors[selectedCategory] }}>+{value.toFixed(1)}</b></li>)}</ul>
+                : <p className="detail-breakdown-empty">아직 이 카테고리에 반영된 활동이 없어요.</p>}
+            </div>
+          </div>}
         </SheetContent>
       </Sheet>
     </main>

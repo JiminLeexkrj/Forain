@@ -6,6 +6,7 @@ export type { D1PreparedStatement } from "@/lib/database";
 
 export type ExtractedActivity = {
   name: string;
+  normalizedName: string;
   category: string;
   confidence: number;
   evidence: string;
@@ -57,6 +58,7 @@ export function mockAnalyze(body: string): ExtractedActivity[] {
         if (found.some((activity) => `${activity.category}:${activity.name}` === key)) continue;
         found.push({
           name: rule.name,
+          normalizedName: rule.name,
           category: rule.category,
           confidence: 0.88,
           evidence: sentence.replace(/[.!?。]+$/, ""),
@@ -87,7 +89,7 @@ export async function analyzeActivities(body: string): Promise<ExtractedActivity
     body: JSON.stringify({
       model: openaiActivityModel || "gpt-5.6-luna",
       input: [
-        { role: "system", content: "사용자의 일기에서 사용자가 실제로 수행한 활동만 추출한다. 계획, 실패한 시도, 타인의 활동, 오래된 회상은 제외한다. 감정이나 성격을 추론하지 않는다." },
+        { role: "system", content: "사용자의 일기에서 사용자가 실제로 수행한 활동만 추출한다. 계획, 실패한 시도, 타인의 활동, 오래된 회상은 제외한다. 감정이나 성격을 추론하지 않는다. 각 활동마다 name(일기 문장에서 드러나는 구체적인 이름)과 normalizedName(같은 종류의 활동끼리 묶이도록 만든 짧은 일반화된 이름, 1~4단어)을 함께 만든다. normalizedName에는 사람 이름, 관계(아버지·딸·친구 등), 수단(전화·문자·화상통화 등), 장소, 횟수 같은 구체적인 세부사항을 넣지 않고, 활동의 본질만 남긴 일반 명사(구)로 적는다. 대화나 만남처럼 상대방·방식이 달라도 본질이 같은 활동은 항상 같은 normalizedName으로 통일한다. 예: '아버지와 대화'와 '딸과 전화로 대화'는 둘 다 normalizedName '대화', '분기 전략회의에서 제품 라인 종료를 결정함'과 '회의실에서 제품 라인 종료를 말함'은 둘 다 normalizedName '회의', '기타를 30분 연습'과 '기타 연습을 짧게 함'은 둘 다 normalizedName '기타 연습'." },
         { role: "user", content: body },
       ],
       text: {
@@ -104,12 +106,13 @@ export async function analyzeActivities(body: string): Promise<ExtractedActivity
                   type: "object",
                   properties: {
                     name: { type: "string" },
+                    normalizedName: { type: "string" },
                     category: { type: "string", enum: categories },
                     confidence: { type: "number", minimum: 0, maximum: 1 },
                     evidence: { type: "string" },
                     rawGrowth: { type: "number", minimum: 0.1, maximum: 2 },
                   },
-                  required: ["name", "category", "confidence", "evidence", "rawGrowth"],
+                  required: ["name", "normalizedName", "category", "confidence", "evidence", "rawGrowth"],
                   additionalProperties: false,
                 },
               },

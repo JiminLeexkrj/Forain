@@ -204,7 +204,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .paper-editor input { border-bottom-color: rgba(224,205,180,.12); color: #f3ede4; }
 .paper-editor textarea { color: #e1d8cc; }
 .settings-page { background: linear-gradient(145deg, #07100d, #0c1712); }
-.activity-sheet { background: rgba(9, 18, 14, .96); color: #e8eee8; }
+.activity-sheet { background: rgba(9, 18, 14, .96); color: #e8eee8; overflow-y: auto; }
 .activity-content dl div { background: #14211b; }
 .activity-content dt { color: #91a097; }
 .activity-content dd { color: #e2eae3; }
@@ -215,6 +215,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .detail-orbit { position: relative; width: 170px; height: 170px; margin: 18px auto 34px; border: 1px solid color-mix(in srgb, var(--category-color), transparent 38%); border-radius: 50%; box-shadow: 0 0 34px color-mix(in srgb, var(--category-color), transparent 74%), inset 0 0 35px color-mix(in srgb, var(--category-color), transparent 86%); }
 .detail-orbit span, .detail-orbit i, .detail-orbit b { position: absolute; inset: 50% auto auto 50%; display: block; background: var(--category-color); transform-origin: 0 50%; }
 .detail-orbit span { width: 72px; height: 4px; box-shadow: 0 0 12px var(--category-color); }.detail-orbit i { width: 57px; height: 2px; transform: rotate(120deg); }.detail-orbit b { width: 48px; height: 2px; transform: rotate(240deg); }
+.detail-breakdown { margin-top: 18px; }.detail-breakdown ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 1px; overflow: hidden; border-radius: 16px; }.detail-breakdown li { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #14211b; color: #e2eae3; }.detail-breakdown li b { font-weight: 700; }.detail-breakdown-empty { margin: 10px 0 0; color: #74866f; font-size: 13px; }
 [data-slot="dialog-overlay"] { background: rgba(1, 5, 3, .55); backdrop-filter: blur(9px) saturate(120%); -webkit-backdrop-filter: blur(9px) saturate(120%); }
 .forest-overlay { width: min(920px, calc(100vw - 36px)); max-width: 920px !important; max-height: calc(100vh - 42px); overflow: auto; gap: 22px; padding: clamp(24px, 4vw, 42px); border: none; border-radius: 28px; background: rgba(8, 17, 13, .95); color: #e8eee8; box-shadow: 0 38px 110px rgba(0,0,0,.65), inset 0 1px rgba(255,255,255,.14); backdrop-filter: blur(30px) saturate(135%); -webkit-backdrop-filter: blur(30px) saturate(135%); }
 .writing-overlay { width: min(760px, calc(100vw - 30px)); max-width: 760px !important; padding: clamp(18px, 3vw, 30px); background: rgba(24, 16, 10, .78); }
